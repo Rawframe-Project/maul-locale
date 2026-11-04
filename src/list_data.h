@@ -16,10 +16,10 @@
 
 // Whether a pattern sets unit is a table whose records index its strings
 // and whose strings each hold "{0}" and "{1}" once, and no other brace.
-bool mlocValidListPatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidListPatterns(const DataView* view, DataSpan payload);
 
 // Whether a locale's lists unit has its size.
-bool mlocValidLists(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidLists(const DataView* view, DataSpan payload);
 
 // A language's contextual change of the "two" and "end" patterns, as
 // ICU's ListFormatter: Spanish's "y" and "o", Hebrew's vav.

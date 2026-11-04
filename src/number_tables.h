@@ -54,6 +54,8 @@
 #ifndef MLOC_NUMBER_TABLES_H
 #define MLOC_NUMBER_TABLES_H
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -191,7 +193,7 @@ static inline uint64_t mlocPackSystem(const char* id, uint32_t length)
 }
 
 // Whether a packed id is one mlocPackSystem gives.
-static inline bool mlocValidSystemId(uint64_t packed)
+MLOC_NODISCARD static inline bool mlocValidSystemId(uint64_t packed)
 {
     bool ended = false;
     for (int i = 0; i < 8; i++)

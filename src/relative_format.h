@@ -37,10 +37,10 @@ typedef struct RelativeFormat
 
 // The formatter of an opaque value, or false when the library did not
 // make it.
-bool mlocReadRelativeFormat(const mlocRelativeFormatter* opaque, RelativeFormat* f);
+MLOC_NODISCARD bool mlocReadRelativeFormat(const mlocRelativeFormatter* opaque, RelativeFormat* f);
 
 // Whether an amount and a unit are ones the formatter takes.
-bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit);
+MLOC_NODISCARD bool mlocValidRelativeAmount(const mlocDecimal* amount, uint32_t unit);
 
 // Writes a valid amount of a unit as one part of a kind; as
 // mlocRelativeFormatter_Format's result but for the output's checks.

@@ -66,7 +66,7 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
 // (left uninitialized or cleared) or whose sizes disagree, so that
 // nothing is read through it. The bytes pointer cannot be checked: one
 // changed after the open is outside the contract.
-static inline bool mlocReadView(const mlocData* data, DataView* viewOut)
+MLOC_NODISCARD static inline bool mlocReadView(const mlocData* data, DataView* viewOut)
 {
     memcpy(viewOut, data, sizeof(*viewOut));
     const DataView* v = viewOut;
@@ -88,7 +88,7 @@ static inline DataView mlocViewOf(const mlocData* data)
 
 // Whether a set is one a call may read: not null, and each of its
 // sources an opened view (mlocReadView).
-bool mlocValidDataSet(const mlocDataSet* set);
+MLOC_NODISCARD bool mlocValidDataSet(const mlocDataSet* set);
 
 // The index of a locale id, or false when the source has none.
 bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uint32_t* indexOut);

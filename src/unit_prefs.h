@@ -47,7 +47,7 @@ typedef struct UnitRoute
 } UnitRoute;
 
 // Whether a usage is well-formed: parts of 3 to 8 letters or digits.
-bool mlocValidUsage(const char* usage, size_t length);
+MLOC_NODISCARD bool mlocValidUsage(const char* usage, size_t length);
 
 // The route of an input unit for a usage (empty for "default"), as
 // mlocGetUnitPreference chooses. Returns mloc_success; mloc_errorNotFound

@@ -28,7 +28,7 @@ typedef enum KoreanFinal
 
 // Whether Korean has what a request asks: a particle and nothing of the
 // Turkic, Hungarian or Finnish fields.
-bool mlocKoreanRequestValid(const mlocInflection* request);
+MLOC_NODISCARD bool mlocKoreanRequestValid(const mlocInflection* request);
 
 // The final of the code point that ends text[0, length).
 KoreanFinal mlocKoreanFinal(const uint8_t* text, size_t length);

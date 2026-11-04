@@ -140,6 +140,8 @@
 #include "collation_unsafe.h"
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 #include <string.h>
 
@@ -334,7 +336,8 @@ static inline uint32_t mlocCollationListStart(const CollationRoot* r, uint32_t n
 // mayRefer (a trie value, a context list's default or entry) also an
 // expansion inside its array, an offset whose element exists, or the
 // implicit word. Every special CE32's low byte is 0xC0 and its tag.
-static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32, bool mayRefer)
+MLOC_NODISCARD static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32,
+                                                         bool mayRefer)
 {
     if (!mlocCe32IsSpecial(ce32))
     {
@@ -368,7 +371,8 @@ static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32,
 
 // A context list's CE32: valid with mayRefer, or a contraction naming a
 // list before the given one (never, for the root: below is 0).
-static inline bool mlocCollationListCe32Valid(const CollationRoot* r, uint32_t ce32, uint32_t below)
+MLOC_NODISCARD static inline bool mlocCollationListCe32Valid(const CollationRoot* r, uint32_t ce32,
+                                                             uint32_t below)
 {
     return mlocCollationCe32Valid(r, ce32, true) ||
            ((ce32 & 0xFF) == (collationSpecialByte | collationTagContraction) &&
@@ -378,8 +382,8 @@ static inline bool mlocCollationListCe32Valid(const CollationRoot* r, uint32_t c
 // The context list from start to end: a valid default, then entries
 // that fill it exactly, each with a length from 1 to 8 and a valid CE32,
 // contractions naming lists below the given number allowed.
-static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start, uint32_t end,
-                                          uint32_t below)
+MLOC_NODISCARD static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start,
+                                                         uint32_t end, uint32_t below)
 {
     if (end - start < 2 || !mlocCollationListCe32Valid(r, mlocCollationContext(r, start), below))
     {
@@ -406,7 +410,7 @@ static inline bool mlocCollationListValid(const CollationRoot* r, uint32_t start
 
 // A trie value: anything a context list or an expansion may hold, or a
 // context naming a list that exists.
-static inline bool mlocCollationTrieValueValid(const CollationRoot* r, uint32_t ce32)
+MLOC_NODISCARD static inline bool mlocCollationTrieValueValid(const CollationRoot* r, uint32_t ce32)
 {
     if (mlocCe32IsSpecial(ce32) && ce32 != collationImplicitCe32 &&
         (ce32 & 0xF0) == collationSpecialByte &&
@@ -443,7 +447,7 @@ static inline bool mlocCollationCompressible(const CollationRoot* r, uint32_t le
 // The scripts rising by code, each naming a start that has one after it;
 // the starts rising from 0, 16-bit, the last 0xFF00 (the trailing range),
 // at most 256 (reordering's tables are indexed by start).
-static inline bool mlocCollationScriptsValid(const CollationRoot* r)
+MLOC_NODISCARD static inline bool mlocCollationScriptsValid(const CollationRoot* r)
 {
     bool ok = r->startCount >= 2 && r->startCount <= 256 && mlocCollationStart(r, 0) == 0 &&
               mlocCollationStart(r, r->startCount - 1) == 0xFF00;
@@ -502,7 +506,7 @@ static inline uint64_t mlocCollationUnitHash(DataSpan unit, uint32_t at)
 }
 
 // Whether a unit holds its own hash at an offset.
-static inline bool mlocCollationHashValid(DataSpan unit, uint32_t at)
+MLOC_NODISCARD static inline bool mlocCollationHashValid(DataSpan unit, uint32_t at)
 {
     return unit.size >= at + 8 && mlocLoad64(unit.bytes + at) == mlocCollationUnitHash(unit, at);
 }
@@ -511,7 +515,7 @@ static inline bool mlocCollationHashValid(DataSpan unit, uint32_t at)
 // fast Latin table and unsafe ranges, checking only that they fit. The
 // runtime reads a unit the validator passed this way (the full checks were
 // most of making a collator).
-static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
+MLOC_NODISCARD static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
 {
     if (span.size < collationRootHead)
     {
@@ -561,7 +565,7 @@ static inline bool mlocViewCollationRoot(DataSpan span, CollationRoot* out)
 
 // Reads and checks a root unit: laid out, then its scripts, every
 // context list once, every trie value and every expansion word.
-static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
+MLOC_NODISCARD static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
 {
     CollationRoot r;
     if (!mlocViewCollationRoot(span, &r))
@@ -594,7 +598,7 @@ static inline bool mlocReadCollationRoot(DataSpan span, CollationRoot* out)
 }
 
 // The root unit's validator, as data files are opened.
-bool mlocValidCollationRoot(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCollationRoot(const DataView* view, DataSpan payload);
 
 // A tailoring: its elements in the root's form (no scripts), its
 // settings word and its reorder codes.
@@ -613,14 +617,14 @@ typedef struct CollationTailoring
 } CollationTailoring;
 
 // Whether a settings word holds only the values its fields may.
-static inline bool mlocCollationSettingsValid(uint32_t s)
+MLOC_NODISCARD static inline bool mlocCollationSettingsValid(uint32_t s)
 {
     return (s & 7) <= 5 && (s >> 3 & 3) <= 2 && (s >> 5 & 7) <= 4 && (s >> 10 & 3) <= 2 &&
            (s >> 12 & 3) <= 2 && (s >> 14 & 3) <= 2 && (s & ~0x3FFFFu) == 0;
 }
 
 // Whether reorder codes are scripts' or groups', each once.
-static inline bool mlocCollationReorderValid(const uint8_t* codes, uint32_t count)
+MLOC_NODISCARD static inline bool mlocCollationReorderValid(const uint8_t* codes, uint32_t count)
 {
     bool ok = count <= collationMaxReorderCodes;
     for (uint32_t i = 0; ok && i < count; i++)
@@ -641,7 +645,7 @@ static inline bool mlocCollationReorderValid(const uint8_t* codes, uint32_t coun
 }
 
 // Lays out a tailoring as mlocViewCollationRoot lays out the root.
-static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring* out)
+MLOC_NODISCARD static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring* out)
 {
     if (span.size < collationHead)
     {
@@ -718,7 +722,7 @@ static inline bool mlocViewCollationTailoring(DataSpan span, CollationTailoring*
 // leading word 1, for codes given, minHighNoReorder a lead byte's start,
 // the ranges' limits rising. Its agreement with the root, another unit,
 // is the generator's; a wrong one only orders wrongly.
-static inline bool mlocCollationReorderingValid(const CollationTailoring* t)
+MLOC_NODISCARD static inline bool mlocCollationReorderingValid(const CollationTailoring* t)
 {
     if (t->reordering == nullptr)
     {
@@ -737,7 +741,7 @@ static inline bool mlocCollationReorderingValid(const CollationTailoring* t)
 
 // Reads and checks a tailoring as mlocReadCollationRoot reads the root,
 // the fallback word allowed in the trie.
-static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
+MLOC_NODISCARD static inline bool mlocReadCollationTailoring(DataSpan span, CollationTailoring* out)
 {
     CollationTailoring t;
     if (!mlocViewCollationTailoring(span, &t))
@@ -808,7 +812,7 @@ static inline bool mlocFindCollationType(const CollationTypes* t, const char* na
     return false;
 }
 
-bool mlocValidCollationTypes(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCollationTypes(const DataView* view, DataSpan payload);
 
 // The radical-stroke Han table, read from a unit the validator passed.
 typedef struct CollationHan
@@ -862,6 +866,6 @@ static inline bool mlocCollationHanPrimary(const CollationHan* han, uint32_t cod
     return false;
 }
 
-bool mlocValidCollationHan(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCollationHan(const DataView* view, DataSpan payload);
 
 #endif

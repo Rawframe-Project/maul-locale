@@ -17,8 +17,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-bool mlocValidNameIds(const DataView* view, DataSpan payload);
-bool mlocValidNames(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNameIds(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNames(const DataView* view, DataSpan payload);
 
 // The index of a code in a valid codes unit; false when the unit lacks
 // it.

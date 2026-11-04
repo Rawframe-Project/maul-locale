@@ -17,11 +17,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-bool mlocValidUnitIds(const DataView* view, DataSpan payload);
-bool mlocValidUnitNames(const DataView* view, DataSpan payload);
-bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload);
-bool mlocValidUnitCases(const DataView* view, DataSpan payload);
-bool mlocValidUnitDerivations(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitIds(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitNames(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitNameExtras(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitCases(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitDerivations(const DataView* view, DataSpan payload);
 
 // The code of an identifier in a valid identifiers unit, and its kind
 // (a unitId value); false when the unit lacks it.
@@ -73,7 +73,7 @@ bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint3
 
 // Whether a patterns unit is a table of one record whose string indexes
 // are in range, its coordinate patterns each holding "{0}" once.
-bool mlocValidUnitPatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidUnitPatterns(const DataView* view, DataSpan payload);
 
 // A locale's duration and coordinate patterns (unit_tables.h's order).
 typedef struct UnitPatternTexts

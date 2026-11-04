@@ -11,19 +11,21 @@
 #include "data_view.h"
 #include "spellout_tables.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 // Whether a group's unit holds: its sizes, every offset, index and
 // target in range, its text well-formed UTF-8, each set's bases in
 // order.
-bool mlocValidSpelloutRules(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidSpelloutRules(const DataView* view, DataSpan payload);
 
 // Whether the numbering systems unit holds, its ids ascending.
-bool mlocValidSpelloutSystems(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidSpelloutSystems(const DataView* view, DataSpan payload);
 
 // Whether the titlecase unit holds: its code points ascending, each
 // titlecase in range and well-formed UTF-8.
-bool mlocValidSpelloutTitlecase(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidSpelloutTitlecase(const DataView* view, DataSpan payload);
 
 // A lowercase letter's titlecase from a valid titlecase unit; false for a
 // code point it does not list.

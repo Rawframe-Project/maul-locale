@@ -11,7 +11,7 @@
 
 #include "maul-locale/locale.h"
 
-bool mlocValidParents(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidParents(const DataView* view, DataSpan payload);
 
 // Finds the unit of a kind for a locale: its key, then each key of its
 // chain in the component, each in every source of the set in order.

@@ -19,7 +19,8 @@ typedef struct DurationFields
 } DurationFields;
 
 // Reads a duration's fields; false for one mlocMakeDuration refuses.
-bool mlocReadDurationFields(const mlocDurationValues* duration, DurationFields* fields);
+MLOC_NODISCARD bool mlocReadDurationFields(const mlocDurationValues* duration,
+                                           DurationFields* fields);
 
 // The value of a field plus each of the next fractions fields over 1000
 // times the one before (ECMA-402's ComputeFractionalDigits), negative

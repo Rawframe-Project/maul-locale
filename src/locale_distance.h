@@ -45,7 +45,7 @@ typedef struct MatchTable
     uint32_t minRegionDistance;
 } MatchTable;
 
-bool mlocValidMatch(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidMatch(const DataView* view, DataSpan payload);
 
 // The first source's matching table, or false.
 bool mlocOpenMatchTable(const mlocDataSet* data, MatchTable* tableOut);

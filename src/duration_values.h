@@ -14,6 +14,7 @@
 // Reads a duration's ten fields as magnitudes, and whether it is
 // negative (a field below 0), when mlocMakeDuration takes it; false for
 // a duration it refuses.
-bool mlocReadValidDuration(const mlocDurationValues* values, Wide* magnitudes, bool* negativeOut);
+MLOC_NODISCARD bool mlocReadValidDuration(const mlocDurationValues* values, Wide* magnitudes,
+                                          bool* negativeOut);
 
 #endif

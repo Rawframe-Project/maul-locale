@@ -57,7 +57,7 @@ typedef struct FinnishForm
 
 // Whether Finnish has what a request asks: one of its 14 cases, a
 // possessor of person 1 to 3, the question clitic; no copula.
-bool mlocFinnishRequestValid(const mlocInflection* request);
+MLOC_NODISCARD bool mlocFinnishRequestValid(const mlocInflection* request);
 
 // The name of the letter that ends text[0, end), as Kielitoimisto reads
 // it (aa, bee, äf); null for none.

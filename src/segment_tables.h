@@ -64,6 +64,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 // The segmentations a unit gives, as bits.
@@ -102,6 +104,6 @@ enum
 };
 
 // Whether a payload is a valid segmentation unit.
-bool mlocValidSegments(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidSegments(const DataView* view, DataSpan payload);
 
 #endif

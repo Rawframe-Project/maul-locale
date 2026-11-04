@@ -11,6 +11,6 @@
 
 // Whether a time duration is one the library would make: of one sign,
 // nanoseconds within a second, seconds below 2^53.
-bool mlocTimeDurationValid(const mlocTimeDuration* duration);
+MLOC_NODISCARD bool mlocTimeDurationValid(const mlocTimeDuration* duration);
 
 #endif

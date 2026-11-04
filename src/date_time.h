@@ -19,11 +19,11 @@ enum
 };
 
 // Whether a time of day is one the library made.
-bool mlocTimeValid(const mlocTime* time);
+MLOC_NODISCARD bool mlocTimeValid(const mlocTime* time);
 
 // Whether a date and a time of day are ones the library made; a
 // date-time's limits are not checked.
-bool mlocDateTimeValid(const mlocDateTime* dateTime);
+MLOC_NODISCARD bool mlocDateTimeValid(const mlocDateTime* dateTime);
 
 // ISODateTimeWithinLimits for a valid date-time: all but the first
 // day's midnight.
@@ -36,6 +36,6 @@ int64_t mlocDateTimeSeconds(const mlocDateTime* dateTime);
 // Whether a difference's rounding is one Temporal allows: units in
 // order, an increment of 1 to 10^9, and for a time unit one below and
 // dividing the next larger (MaximumTemporalDurationRoundingIncrement).
-bool mlocDateTimeRoundingValid(const mlocDateTimeRounding* rounding);
+MLOC_NODISCARD bool mlocDateTimeRoundingValid(const mlocDateTimeRounding* rounding);
 
 #endif

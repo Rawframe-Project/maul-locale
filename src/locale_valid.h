@@ -17,6 +17,6 @@
 // or 3 digits or none, and a tail of lowercase subtags of 1 to 8 letters
 // and digits joined by single hyphens. Syntax only: an alias or an
 // unsorted tail passes.
-bool mlocLocaleValid(const mlocLocale* locale);
+MLOC_NODISCARD bool mlocLocaleValid(const mlocLocale* locale);
 
 #endif

@@ -28,7 +28,7 @@ static inline uint8_t mlocDigitAt(const mlocDecimal* d, int64_t power)
 }
 
 // Whether every field holds as the library writes it.
-bool mlocValidDecimal(const mlocDecimal* d);
+MLOC_NODISCARD bool mlocValidDecimal(const mlocDecimal* d);
 
 // The bytes of a valid decimal's plain text (mlocFormatDecimal's) from
 // offset from on, at most capacity of them, written into out; returns

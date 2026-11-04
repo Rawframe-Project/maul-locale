@@ -16,7 +16,7 @@
 #include <stddef.h>
 
 // Whether a parse sets unit is as parse_tables.h lays it out.
-bool mlocValidParseSets(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidParseSets(const DataView* view, DataSpan payload);
 
 typedef struct ParseCurrency ParseCurrency;
 

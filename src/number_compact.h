@@ -32,7 +32,7 @@ constexpr uint32_t compactNoPattern = 0xFFFFFFFFu;
 
 // Whether every pattern index a table holds is in the patterns unit, and
 // every other pattern writes digits.
-bool mlocValidCompactUse(CompactData data);
+MLOC_NODISCARD bool mlocValidCompactUse(CompactData data);
 
 // Divides a finite decimal by the power its magnitude's row gives, rounds
 // it by the precision (choosing the row again when rounding carries it

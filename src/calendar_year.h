@@ -42,7 +42,7 @@ enum
 
 // Whether a date is one the library made: not null, a known calendar, a
 // day in Temporal's range.
-bool mlocYearDateValid(const mlocDate* date);
+MLOC_NODISCARD bool mlocYearDateValid(const mlocDate* date);
 
 CalendarSource mlocYearSource(mlocCalendar calendar);
 bool mlocYearLunisolar(CalendarSource source);

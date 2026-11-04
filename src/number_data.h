@@ -11,18 +11,20 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
-bool mlocValidNumberSystems(const DataView* view, DataSpan payload);
-bool mlocValidNumberSymbols(const DataView* view, DataSpan payload);
-bool mlocValidNumberPatterns(const DataView* view, DataSpan payload);
-bool mlocValidNumbers(const DataView* view, DataSpan payload);
-bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload);
-bool mlocValidNumberCompact(const DataView* view, DataSpan payload);
-bool mlocValidCurrencyFractions(const DataView* view, DataSpan payload);
-bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload);
-bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload);
-bool mlocValidCurrencyNames(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumberSystems(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumberSymbols(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumberPatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumbers(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumberCompactPatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidNumberCompact(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCurrencyFractions(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCurrencyPatterns(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCurrencySymbols(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidCurrencyNames(const DataView* view, DataSpan payload);
 
 // A table unit's string count, record count and the start of its text
 // (the symbol and pattern units share this shape).
@@ -41,11 +43,12 @@ NumberTable mlocReadNumberTable(DataSpan unit, uint32_t recordSize);
 // Whether a table unit's sizes hold and its strings are well-formed
 // UTF-8 without NUL, their bytes below 0x20 at most maxPlaceholder (0 for
 // none). Its records are the caller's to check.
-bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize, uint8_t maxPlaceholder);
+MLOC_NODISCARD bool mlocValidNumberTable(DataSpan payload, uint32_t recordSize,
+                                         uint8_t maxPlaceholder);
 
 // Whether text is well-formed UTF-8 without NUL, its bytes below 0x20 at
 // most maxPlaceholder (0 for none).
-bool mlocValidDataText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder);
+MLOC_NODISCARD bool mlocValidDataText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder);
 
 // A compact table of a valid compact unit, or null for an index past its
 // tables.
@@ -95,7 +98,7 @@ typedef struct SparseShape
 
 // Whether a sparse unit's sizes hold, its strings are valid text, its
 // codes ascend and its rows are valid, as its shape says.
-bool mlocValidSparse(DataSpan payload, const SparseShape* shape);
+MLOC_NODISCARD bool mlocValidSparse(DataSpan payload, const SparseShape* shape);
 
 // The row of a code in a valid sparse unit, or null.
 const uint8_t* mlocFindSparseRow(const SparseTable* table, uint16_t code);

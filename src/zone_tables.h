@@ -49,6 +49,8 @@
 
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -141,7 +143,7 @@ bool mlocZoneTablesOf(DataSpan payload, ZoneTables* out);
 // case folded, each primary its own primary and of its name's zone,
 // the primaries listed once each in byte order, offsets within a day,
 // closing changes in February to November.
-bool mlocValidZones(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidZones(const DataView* view, DataSpan payload);
 
 // The tables of the first source of a set with a zones unit, or false.
 bool mlocFindZoneTables(const mlocDataSet* data, ZoneTables* out);

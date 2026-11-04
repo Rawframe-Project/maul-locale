@@ -30,6 +30,8 @@
 #include "bytes.h"
 #include "data_view.h"
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -63,14 +65,14 @@ static inline uint32_t mlocTrieSupplementarySize(uint32_t highStart)
 }
 
 // Whether a data block offset leaves a whole block inside the data.
-static inline bool mlocTrieBlockFits(uint32_t offset, uint32_t dataLength)
+MLOC_NODISCARD static inline bool mlocTrieBlockFits(uint32_t offset, uint32_t dataLength)
 {
     return offset <= dataLength - trieBlockLength;
 }
 
 // Lays out a trie at the start of a span, checking only that it fits;
 // for a trie a validator passed (mlocReadCodePointTrie).
-static inline bool mlocViewCodePointTrie(DataSpan span, CodePointTrie* out)
+MLOC_NODISCARD static inline bool mlocViewCodePointTrie(DataSpan span, CodePointTrie* out)
 {
     if (span.size < trieHead)
     {
@@ -108,7 +110,7 @@ static inline bool mlocViewCodePointTrie(DataSpan span, CodePointTrie* out)
 }
 
 // Whether every offset of a laid-out trie points inside its data.
-static inline bool mlocCodePointTrieOffsetsValid(const CodePointTrie* t)
+MLOC_NODISCARD static inline bool mlocCodePointTrieOffsetsValid(const CodePointTrie* t)
 {
     bool ok = true;
     for (uint32_t i = 0; ok && i < trieBmpBlocks; i++)
@@ -129,7 +131,7 @@ static inline bool mlocCodePointTrieOffsetsValid(const CodePointTrie* t)
 
 // Reads a trie at the start of a span and checks every offset in it;
 // false for one that does not fit the span or points outside its data.
-static inline bool mlocReadCodePointTrie(DataSpan span, CodePointTrie* out)
+MLOC_NODISCARD static inline bool mlocReadCodePointTrie(DataSpan span, CodePointTrie* out)
 {
     return mlocViewCodePointTrie(span, out) && mlocCodePointTrieOffsetsValid(out);
 }

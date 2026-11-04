@@ -23,7 +23,7 @@ typedef struct Likely
     uint32_t languageCount;
 } Likely;
 
-bool mlocValidLikely(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidLikely(const DataView* view, DataSpan payload);
 
 // The first source's likely subtags table, or false.
 bool mlocOpenLikely(const mlocDataSet* data, Likely* likelyOut);

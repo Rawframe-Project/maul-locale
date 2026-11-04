@@ -46,7 +46,7 @@ enum
 
 // Whether a context transforms unit has a byte per usage and no other
 // bits.
-bool mlocValidLocaleContext(const DataView* view, DataSpan payload);
+MLOC_NODISCARD bool mlocValidLocaleContext(const DataView* view, DataSpan payload);
 
 // The contexts in which a usage titlecases for a locale.
 uint8_t mlocGetLocaleContext(const mlocDataSet* data, const mlocLocale* locale, ContextUsage usage);

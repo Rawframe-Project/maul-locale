@@ -60,7 +60,7 @@ typedef struct HungarianForm
 
 // Whether Hungarian has what a request asks: one of its 17 cases, a
 // possessor of person 1 to 3; no copula and no question suffix.
-bool mlocHungarianRequestValid(const mlocInflection* request);
+MLOC_NODISCARD bool mlocHungarianRequestValid(const mlocInflection* request);
 
 // Writes a request's suffixes on a text's end; false when the spoken
 // form has nothing to read (no letter).
