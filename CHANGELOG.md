@@ -5,6 +5,19 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.11.0...v0.12.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **zone:** mlocTimeZone's fields are now data (an mlocData), unit and identifier, and offsetMinutes, 40 bytes in place of 24. A program that stored a zone, or read zones and zonesSize, must find the zone again with mlocFindTimeZone or mlocGetTimeZone; one that builds an offset zone by hand sets offsetMinutes alone.
+
+### Fixed
+
+* **data:** refuse a data source no open filled ([#465](https://github.com/Rawframe-Project/maul-locale/issues/465)) ([0535285](https://github.com/Rawframe-Project/maul-locale/commit/05352856d37efae1609e896cf5742849852807d5)), closes [#462](https://github.com/Rawframe-Project/maul-locale/issues/462)
+* **message:** read a bound message within its bytes whatever they hold ([#460](https://github.com/Rawframe-Project/maul-locale/issues/460)) ([24a5b42](https://github.com/Rawframe-Project/maul-locale/commit/24a5b427b7de98885df0c5d75c8e4ab3cbf07175)), closes [#458](https://github.com/Rawframe-Project/maul-locale/issues/458)
+* **zone:** read a named zone's unit through its data ([#461](https://github.com/Rawframe-Project/maul-locale/issues/461)) ([ae1e959](https://github.com/Rawframe-Project/maul-locale/commit/ae1e959197f698ec0675852ba9f0ef06f263c859)), closes [#459](https://github.com/Rawframe-Project/maul-locale/issues/459)
+
 ## [0.11.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.10.0...v0.11.0) (2026-11-03)
 
 ### Changed
