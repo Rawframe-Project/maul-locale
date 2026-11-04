@@ -7,18 +7,32 @@ may change the API, the ABI and every data format.
 
 ## [0.11.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.10.0...v0.11.0) (2026-11-03)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **relative:** mlocRelativeFormatter_Format and mlocRelativeFormatter_FormatDayTime write a name or pattern longer than 256 bytes from a relative time unit, where they returned mloc_errorFormat. A program that loads such data gets the text now.
-* **message:** a message writes a zoned date-time argument with no function whole when its zone identifier is longer than about 90 bytes, where it wrote the fallback {$x} and, in strict mode, returned mloc_errorFallback. A program that relied on that fallback gets the formatted text now.
-* **datetime:** a date whose pattern spells out a number field now writes the spelled-out text whole when it passes 256 bytes, where it wrote the number in digits. A program that stored such a date writes it differently now.
-
-### Fixed
-
-* **datetime:** write a long spelled-out number whole ([#449](https://github.com/Rawframe-Project/maul-locale/issues/449)) ([850475f](https://github.com/Rawframe-Project/maul-locale/commit/850475f54fbcaf498e279e2e2165417789190ba3)), closes [#446](https://github.com/Rawframe-Project/maul-locale/issues/446)
-* **message:** write a zoned argument with a long zone identifier ([#450](https://github.com/Rawframe-Project/maul-locale/issues/450)) ([561497a](https://github.com/Rawframe-Project/maul-locale/commit/561497a51149f6d8382e582e505c55511e4c004b)), closes [#445](https://github.com/Rawframe-Project/maul-locale/issues/445)
-* **relative:** write a long name or pattern from the data ([#454](https://github.com/Rawframe-Project/maul-locale/issues/454)) ([b6fabff](https://github.com/Rawframe-Project/maul-locale/commit/b6fabff45df3ef4b12aa2543a7c781c0cd6bc1a5)), closes [#444](https://github.com/Rawframe-Project/maul-locale/issues/444)
+- **Breaking: a long spelled-out number in a date is written whole.**
+  A date whose pattern spells out a number field (a numbering system
+  override naming spell-out rules, such as `haw`'s month) wrote the
+  number in digits, and reported nothing, when the spelled-out text
+  passed 256 bytes. It now writes the spelled-out text whole: with
+  spell-out rules that give 300 letters for October, `haw`'s short date of
+  2026-10-15 gave `15/10/26` and now gives the 300 letters between
+  `15/` and `/26`
+  ([#449](https://github.com/Rawframe-Project/maul-locale/pull/449)).
+- **Breaking: a zoned argument with a long zone identifier is written
+  whole.** `mlocFormatMessage` wrote a zoned date-time argument with no
+  function (`{$x}`) as its fallback, with an Unsupported Operation
+  fault (`mloc_errorFallback` in strict mode), when its zone's
+  identifier was longer than about 90 bytes, which only a zones file a
+  host loads can give. It now writes the argument's ISO 8601 text
+  whole, up to a 255-byte identifier
+  ([#450](https://github.com/Rawframe-Project/maul-locale/pull/450)).
+- **Breaking: relative time writes long names and patterns.**
+  `mlocRelativeFormatter_Format` and
+  `mlocRelativeFormatter_FormatDayTime` returned `mloc_errorFormat`, a
+  status neither header lists, when the name ("tomorrow") or pattern
+  ("in {0} days") they write from a relative time unit was longer than
+  256 bytes. They now write it whole, with the same parts as a short
+  one ([#454](https://github.com/Rawframe-Project/maul-locale/pull/454)).
 
 ## [0.10.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.9.0...v0.10.0) (2026-11-03)
 
