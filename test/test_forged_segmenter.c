@@ -264,6 +264,17 @@ static void TestQueueing(void)
     CHECK(Waiting(text, 1, &forged) &&
               mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
           "a break pulled past a queue's distance from its first is refused");
+    // A first break at the top of the offsets, its piece empty so its text
+    // is not at hand: a break pulled before it is less than 256 below it
+    // only by wrapping, and is refused as before the first.
+    CHECK(Waiting(words, 1, &forged), "a waiting segmenter is made");
+    Segmenter* s = (Segmenter*)&forged;
+    s->queueBase = SIZE_MAX;
+    s->pieceStart = SIZE_MAX;
+    s->pieceLength = 0;
+    s->cursor = SIZE_MAX;
+    CHECK(mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a break pulled before a first at the top of the offsets is refused");
 }
 
 int main(void)
