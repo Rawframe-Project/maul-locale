@@ -108,9 +108,8 @@ static void TestOpenAndRead(void)
     bool equal = false;
     CHECK(mlocFindTimeZone(&both, "Europe/Vienna", 13, &fromFile) == mloc_success &&
               mlocFindTimeZone(&builtin, "Europe/Vienna", 13, &fromBuiltin) == mloc_success &&
-              (const uint8_t*)fromFile.zones >= s_file &&
-              (const uint8_t*)fromFile.zones < s_file + size &&
-              fromBuiltin.zones != fromFile.zones &&
+              memcmp(&fromFile.data, &sources[0], sizeof(mlocData)) == 0 &&
+              memcmp(&fromBuiltin.data, &sources[1], sizeof(mlocData)) == 0 &&
               mlocTimeZonesEqual(&fromFile, &fromBuiltin, &equal) == mloc_success && equal,
           "a zone found in the file reads the file, and equals the built-in one");
     mlocInstant epoch = {0, 0};
@@ -155,9 +154,60 @@ static void TestRefusals(void)
           "no zones, nulls, a null buffer with a capacity");
 }
 
+// Whether a zone is refused by the calls that read it.
+static bool Refused(const mlocTimeZone* zone)
+{
+    mlocInstant epoch = {0, 0};
+    int32_t offset = 0;
+    char text[64];
+    mlocOutput out = {.buffer = text, .capacity = sizeof text};
+    return mlocGetTimeZoneOffset(zone, &epoch, &offset) == mloc_errorInvalid &&
+           mlocFormatTimeZoneId(zone, &out) == mloc_errorInvalid;
+}
+
+// A zone whose fields come from other zones, or are set by hand, reads
+// only a zones unit its data's open validated: a unit or an identifier
+// past what that data holds is refused at every call.
+static void TestMixedFields(void)
+{
+    uint32_t size = BuildZonesFile("1999z", "1999z\0\0");
+    mlocData sources[2];
+    mlocOpenBuiltinData(&sources[1]);
+    if (size == 0 || mlocOpenData(s_file, size, &sources[0]) != mloc_success)
+    {
+        CHECK(false, "a zones file of another release opens");
+        return;
+    }
+    mlocDataSet file = {&sources[0], 1};
+    mlocDataSet builtin = {&sources[1], 1};
+    mlocTimeZone small;
+    mlocTimeZone large;
+    CHECK(mlocGetTimeZone(&file, 0, &small) == mloc_success &&
+              mlocGetTimeZone(&builtin, mlocGetTimeZoneCount(&builtin) - 1, &large) ==
+                  mloc_success &&
+              large.identifier > small.identifier,
+          "a zone of the file and the built-in data's last");
+    mlocTimeZone mixed = small;
+    mixed.identifier = UINT16_MAX;
+    CHECK(Refused(&mixed), "an identifier past the unit's is refused");
+    mixed = small;
+    mixed.unit = large.unit + 1000;
+    CHECK(Refused(&mixed), "a unit past the data's is refused");
+    mixed = large;
+    mixed.unit = 0;
+    CHECK(large.unit != 0 && Refused(&mixed), "a unit of another kind is refused");
+    mlocInstant epoch = {0, 0};
+    int32_t offset = 0;
+    mlocTimeZone copy;
+    memcpy(&copy, &small, sizeof copy);
+    CHECK(mlocGetTimeZoneOffset(&copy, &epoch, &offset) == mloc_success,
+          "a copied zone reads as the zone");
+}
+
 int main(void)
 {
     TestOpenAndRead();
     TestRefusals();
+    TestMixedFields();
     return s_failures == 0 ? 0 : 1;
 }

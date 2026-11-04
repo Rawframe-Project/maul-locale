@@ -86,4 +86,14 @@ bool mlocDataHasKind(const DataView* view, uint32_t kind);
 bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
                          DataSpan* spanOut);
 
+// A unit by its place in the unit table: its kind and payload, or false
+// past the table. The open checked every entry, so a view an open made
+// reads only its own payloads.
+bool mlocDataUnitAt(const DataView* view, uint32_t index, uint32_t* kindOut, DataSpan* spanOut);
+
+// The first source of a set with a unit of the kind and no locale: the
+// source's place in the set, the unit's in its table, and its payload.
+bool mlocFindDataSetUnitAt(const mlocDataSet* set, uint32_t kind, size_t* sourceOut,
+                           uint32_t* indexOut, DataSpan* spanOut);
+
 #endif

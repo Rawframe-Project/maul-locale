@@ -5,8 +5,12 @@
 
 #include "zone_handle.h"
 
+#include "data_view.h"
 #include "invariant.h"
+#include "kinds.h"
 #include "zone_rules.h"
+
+#include <string.h>
 
 enum
 {
@@ -25,15 +29,21 @@ bool mlocReadTimeZone(const mlocTimeZone* zone, ZoneTables* t, bool* namedOut)
     {
         return false;
     }
-    *namedOut = zone->zones != nullptr;
+    DataView view = mlocViewOf(&zone->data);
+    *namedOut = view.bytes != nullptr;
     if (!*namedOut)
     {
-        return zone->zonesSize == 0 && zone->identifier == 0 &&
-               zone->offsetMinutes >= -maxOffsetMinutes && zone->offsetMinutes <= maxOffsetMinutes;
+        static const mlocData none;
+        return memcmp(&zone->data, &none, sizeof none) == 0 && zone->unit == 0 &&
+               zone->identifier == 0 && zone->offsetMinutes >= -maxOffsetMinutes &&
+               zone->offsetMinutes <= maxOffsetMinutes;
     }
-    return zone->offsetMinutes == 0 &&
-           mlocZoneTablesOf((DataSpan){(const uint8_t*)zone->zones, zone->zonesSize}, t) &&
-           zone->identifier < t->identifierCount;
+    // The unit is read through the data and checked here, at each call:
+    // the zone's fields may come from another zone.
+    uint32_t kind = 0;
+    DataSpan span;
+    return zone->offsetMinutes == 0 && mlocDataUnitAt(&view, zone->unit, &kind, &span) &&
+           kind == kindZones && mlocZoneTablesOf(span, t) && zone->identifier < t->identifierCount;
 }
 
 int32_t mlocTimeZoneOffsetAt(const mlocTimeZone* zone, const ZoneTables* t, bool named,

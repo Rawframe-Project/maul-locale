@@ -354,7 +354,8 @@ static void TestDefaultZone(void)
     s_using = &s_en;
     mlocLocale en;
     mlocMessageFormatter formatter;
-    mlocTimeZone bad = {&en, 1, 0, 0};
+    // A zone the library did not make: an offset zone naming a unit.
+    mlocTimeZone bad = {.unit = 1};
     mlocMessageOptions options = {false, mloc_messageIsolationNone, NULL, 0, &bad};
     CHECK(mlocParseLocale("en", 2, &en).status == mloc_success &&
               mlocInitMessageFormatter(&s_data, &en, &options, &formatter) == mloc_errorInvalid,
@@ -555,7 +556,7 @@ static void TestRefusedArguments(void)
     mlocTime late = {23, 59, 59, 999999999};
     mlocTime over = {23, 59, 59, 1000000000};
     mlocTime hour = {24, 0, 0, 0};
-    mlocTimeZone none = {&date, 1, 0, 0};
+    mlocTimeZone none = {.unit = 1};
     mlocMessageArgument t = {"d", 1, {mloc_messageValueTime, 0, {.time = late}}};
     CHECK(Formats("{$d :time precision=second}", &t, 1, "11:59:59" NNBSP "PM", NULL),
           "the last nanosecond of a day is taken");

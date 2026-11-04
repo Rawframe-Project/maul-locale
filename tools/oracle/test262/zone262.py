@@ -30,13 +30,13 @@ class Instant(ctypes.Structure):
     _fields_ = [("seconds", ctypes.c_int64), ("nanoseconds", ctypes.c_int32)]
 
 
-class TimeZone(ctypes.Structure):
-    _fields_ = [("zones", ctypes.c_void_p), ("zonesSize", ctypes.c_uint32),
-                ("identifier", ctypes.c_uint16), ("offsetMinutes", ctypes.c_int16)]
-
-
 class Data(ctypes.Structure):
     _fields_ = [("opaque", ctypes.c_uint64 * 4)]
+
+
+class TimeZone(ctypes.Structure):
+    _fields_ = [("data", Data), ("unit", ctypes.c_uint32),
+                ("identifier", ctypes.c_uint16), ("offsetMinutes", ctypes.c_int16)]
 
 
 class DataSet(ctypes.Structure):
