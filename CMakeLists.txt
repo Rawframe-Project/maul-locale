@@ -755,6 +755,15 @@ if(MAUL_LOCALE_BUILD_TESTS)
         endif()
         target_compile_definitions(test_index PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
     endif()
+    # An index's bytes forged after it was built.
+    maul_add_test(forged_index WHITEBOX)
+    if(TARGET test_forged_index)
+        if(EMSCRIPTEN)
+            target_link_options(test_forged_index PRIVATE
+                                "SHELL:--embed-file ${MLOC_COLLATION_FILE}@/collation.mloc")
+        endif()
+        target_compile_definitions(test_forged_index PRIVATE MLOC_COLLATION_FILE="${MLOC_COLLATION_PATH}")
+    endif()
     # And relative time.
     set(MLOC_RELATIVE_FILE ${PROJECT_SOURCE_DIR}/src/generated/relative.mloc)
     set(MLOC_RELATIVE_PATH ${MLOC_RELATIVE_FILE})
