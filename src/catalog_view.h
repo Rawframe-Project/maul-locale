@@ -7,6 +7,7 @@
 #ifndef MLOC_CATALOG_VIEW_H
 #define MLOC_CATALOG_VIEW_H
 
+#include "bytes.h"
 #include "catalog_tables.h"
 
 #include "maul-locale/catalog.h"
@@ -37,7 +38,7 @@ static_assert(sizeof(Catalog) <= sizeof(mlocCatalog), "a catalog fits its public
 
 static inline bool mlocReadCatalog(const mlocCatalog* catalog, Catalog* out)
 {
-    if (catalog == nullptr)
+    if (catalog == nullptr || !mlocFlagAt(catalog, offsetof(Catalog, source)))
     {
         return false;
     }

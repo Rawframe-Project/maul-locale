@@ -110,7 +110,7 @@ segment: bytes data_view kinds locale_fallback locale_keyword locale_valid segme
 segment_filter: bytes segmenter
 catalog_hash: bytes
 catalog_tables: asset bytes catalog_hash data_view invariant message_read
-catalog_view: catalog_tables
+catalog_view: bytes catalog_tables
 catalog: asset bytes catalog_tables catalog_view data_view invariant
 catalog_chain: catalog_tables catalog_view invariant
 code_point_trie: bytes data_view

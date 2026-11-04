@@ -3,11 +3,12 @@
 //
 // Catalogs: XXH64 against the reference values, the perfect hash over many
 // keys, and a source and a translation compiled by the catalog tool,
-// opened, looked up and refused when damaged. Run with a directory to
-// write the catalogs into.
+// opened, looked up and refused when damaged or when its stored flag is
+// forged. Run with a directory to write the catalogs into.
 
 #include "catalog_hash.h"
 #include "catalog_tables.h"
+#include "catalog_view.h"
 #include "compile.h"
 #include "file.h"
 #include "table.h"
@@ -223,6 +224,15 @@ static void TestCompiledSet(void)
                   mlocCatalog_FindKey(&enCatalog, "menu.extra", 10, &index) == mloc_errorNotFound &&
                   mlocCatalog_FindKey(&enCatalog, nullptr, 1, &index) == mloc_errorInvalid,
               "keys the set lacks are not found, the orphan included");
+        // A catalog whose source flag holds neither 0 nor 1, which is
+        // undefined to read as a bool, is refused by every call.
+        mlocCatalog forged = enCatalog;
+        ((uint8_t*)&forged)[offsetof(Catalog, source)] = 2;
+        mlocCatalogInfo info;
+        CHECK(mlocCatalog_GetInfo(&forged, &info) == mloc_errorInvalid &&
+                  mlocCatalog_FindKey(&forged, "hello", 5, &index) == mloc_errorInvalid &&
+                  mlocCatalog_GetMessage(&forged, hello, &message, &size) == mloc_errorInvalid,
+              "a catalog whose source flag is neither 0 nor 1 is refused");
     }
     free(enBytes);
     free(trBytes);
