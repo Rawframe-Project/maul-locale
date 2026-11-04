@@ -252,7 +252,8 @@ mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocL
 // which seldom reads it) without; false for any other.
 static bool ReadFormatter(const mlocSpelloutFormatter* opaque, bool withCore, SpelloutFormat* f)
 {
-    if (opaque == nullptr)
+    if (opaque == nullptr || !mlocFlagAt(opaque, offsetof(SpelloutFormat, capitalize)) ||
+        !mlocFlagAt(opaque, offsetof(SpelloutFormat, turkic)))
     {
         return false;
     }

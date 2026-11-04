@@ -9,6 +9,7 @@
 // narrow and not compact, take the locale's percent pattern instead, as
 // ICU's number_formatimpl.cpp does.
 
+#include "bytes.h"
 #include "data_view.h"
 #include "decimal.h"
 #include "invariant.h"
@@ -225,6 +226,11 @@ static_assert(offsetof(UnitFormat, formatter) == 0, "the formatter begins a unit
 static bool ReadUnit(const mlocUnitFormatter* opaque, UnitFormat* u)
 {
     if (opaque == nullptr || !mlocReadFormatter(opaque, sizeof(*opaque), unitStamp, &u->formatter))
+    {
+        return false;
+    }
+    if (!mlocFlagAt(opaque, offsetof(UnitFormat, percent)) ||
+        !mlocFlagAt(opaque, offsetof(UnitFormat, usage)))
     {
         return false;
     }

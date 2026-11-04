@@ -9,6 +9,7 @@
 #include "currency.h"
 
 #include "bytes.h"
+#include "currency_format.h"
 #include "currency_tables.h"
 #include "data_format.h"
 #include "data_view.h"
@@ -27,27 +28,6 @@
 
 #include <string.h>
 
-enum
-{
-    // Marks a currency formatter the library made.
-    currencyStamp = 0x43,
-};
-
-// The opaque value's contents: the formatter, the pattern around its
-// number when it has one, and the currency units of its locale's chain,
-// which parsing reads.
-typedef struct Currency
-{
-    Formatter formatter;
-    Outer outer;
-    bool hasOuter;
-    // The outer pattern is the ISO append's.
-    bool appended;
-    CurrencyChain chain;
-} Currency;
-
-static_assert(sizeof(Currency) <= sizeof(mlocCurrencyFormatter),
-              "a currency formatter fits its opaque value");
 static_assert((int)currencyFieldCount == (int)currencyNameFieldCount,
               "the symbol and name units have as many fields");
 
@@ -438,6 +418,13 @@ mlocResult mlocInitCurrencyFormatter(const mlocDataSet* data, const mlocLocale* 
 static bool ReadCurrency(const mlocCurrencyFormatter* opaque, Currency* c)
 {
     if (!mlocReadFormatter(opaque, sizeof(*opaque), currencyStamp, &c->formatter))
+    {
+        return false;
+    }
+    if (!mlocFlagAt(opaque, offsetof(Currency, hasOuter)) ||
+        !mlocFlagAt(opaque, offsetof(Currency, appended)) ||
+        !mlocFlagAt(opaque, offsetof(Currency, chain.complete)) ||
+        !mlocFlagAt(opaque, offsetof(Currency, chain.turkic)))
     {
         return false;
     }
