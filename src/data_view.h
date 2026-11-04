@@ -8,6 +8,8 @@
 #ifndef MLOC_DATA_VIEW_H
 #define MLOC_DATA_VIEW_H
 
+#include "data_format.h"
+
 #include "maul-locale/data.h"
 
 #include <stdint.h>
@@ -21,10 +23,15 @@ typedef struct DataView
     uint32_t localeCount;
     uint32_t poolOffset;
     uint32_t poolSize;
-    // Zero; it fills the struct so that a view has no padding bytes and
-    // two views of the same bytes compare equal.
-    uint32_t reserved;
+    // dataViewCookie, which only an open writes; it also fills the struct,
+    // so that a view has no padding bytes and two views of the same bytes
+    // compare equal.
+    uint32_t cookie;
 } DataView;
+
+// An opened view's cookie: its top bit set, so that no zeroed or small
+// value is taken for one.
+static const uint32_t dataViewCookie = 0xC00C1E4D;
 
 static_assert(sizeof(DataView) <= sizeof(mlocData), "a view fits its public struct");
 static_assert(alignof(DataView) <= alignof(mlocData), "and its alignment");
@@ -55,13 +62,32 @@ mlocResult mlocOpenDataWithKinds(DataView* viewOut, const void* bytes, size_t si
                                  const DataKind* kinds, uint32_t kindCount);
 
 // The view an mlocData holds, copied out so that no pointer of another
-// type reads the public struct's words.
+// type reads the public struct's words: false for an mlocData no open
+// filled (left uninitialized, cleared, or written by hand), which has no
+// cookie or sizes that disagree, so that nothing is read through it.
+static inline bool mlocReadView(const mlocData* data, DataView* viewOut)
+{
+    memcpy(viewOut, data, sizeof(*viewOut));
+    const DataView* v = viewOut;
+    return v->cookie == dataViewCookie && v->bytes != nullptr && v->poolOffset <= v->size &&
+           v->poolSize == v->size - v->poolOffset &&
+           dataHeaderSize + (uint64_t)v->unitCount * dataUnitSize +
+                   (uint64_t)v->localeCount * dataLocaleSize <=
+               v->poolOffset;
+}
+
+// The view of an mlocData already read with mlocReadView or checked with
+// mlocValidDataSet, or just opened.
 static inline DataView mlocViewOf(const mlocData* data)
 {
     DataView view;
     memcpy(&view, data, sizeof(view));
     return view;
 }
+
+// Whether a set is one a call may read: not null, and each of its
+// sources an opened view (mlocReadView).
+bool mlocValidDataSet(const mlocDataSet* set);
 
 // The index of a locale id, or false when the source has none.
 bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uint32_t* indexOut);

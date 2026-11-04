@@ -240,7 +240,7 @@ static uint8_t ArbitraryGender(const GenderContext* c, const UnitId* id)
 mlocResult mlocGetUnitGender(const mlocDataSet* data, const mlocLocale* locale, const char* unit,
                              size_t unitLength, mlocGender* genderOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || unit == nullptr || unitLength == 0 ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || unit == nullptr || unitLength == 0 ||
         genderOut == nullptr)
     {
         return mloc_errorInvalid;

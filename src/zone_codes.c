@@ -5,6 +5,7 @@
 // identifier, which the set's zones then resolve, so the codes serve zones
 // of any tzdb release.
 
+#include "data_view.h"
 #include "invariant.h"
 #include "zone_code_tables.h"
 #include "zone_handle.h"
@@ -71,7 +72,7 @@ static mlocResult ZoneCodeOf(const mlocDataSet* data, const mlocTimeZone* zone,
 {
     ZoneTables t;
     bool named = false;
-    if (data == nullptr || output == nullptr ||
+    if (!mlocValidDataSet(data) || output == nullptr ||
         (output->buffer == nullptr && output->capacity > 0) || !mlocReadTimeZone(zone, &t, &named))
     {
         return mloc_errorInvalid;
@@ -97,7 +98,7 @@ mlocResult mlocFindTimeZoneBcp47(const mlocDataSet* data, const char* id, size_t
                                  mlocTimeZone* zoneOut)
 {
     ZoneCodeTables c;
-    if (data == nullptr || (id == nullptr && length > 0) || zoneOut == nullptr)
+    if (!mlocValidDataSet(data) || (id == nullptr && length > 0) || zoneOut == nullptr)
     {
         return mloc_errorInvalid;
     }
@@ -149,7 +150,7 @@ mlocResult mlocFindTimeZoneWindows(const mlocDataSet* data, const char* name, si
                                    const char* region, size_t regionLength, mlocTimeZone* zoneOut)
 {
     uint8_t key[3];
-    if (data == nullptr || (name == nullptr && length > 0) ||
+    if (!mlocValidDataSet(data) || (name == nullptr && length > 0) ||
         (region == nullptr && regionLength > 0) || zoneOut == nullptr ||
         !RegionOf(region, regionLength, key))
     {

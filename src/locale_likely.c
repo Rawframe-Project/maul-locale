@@ -307,7 +307,7 @@ bool mlocLocalesOverlap(const mlocLocale* one, const mlocLocale* two)
 mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
                               mlocLocale* localeOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || localeOut == nullptr ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || localeOut == nullptr ||
         mlocLocalesOverlap(locale, localeOut))
     {
         return mloc_errorInvalid;
@@ -323,7 +323,7 @@ mlocResult mlocMaximizeLocale(const mlocDataSet* data, const mlocLocale* locale,
 mlocResult mlocMinimizeLocale(const mlocDataSet* data, const mlocLocale* locale, mlocFavor favor,
                               mlocLocale* localeOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || localeOut == nullptr ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || localeOut == nullptr ||
         mlocLocalesOverlap(locale, localeOut) ||
         (favor != mloc_favorRegion && favor != mloc_favorScript))
     {

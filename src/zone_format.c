@@ -13,6 +13,7 @@
 #include "zone_format.h"
 
 #include "bytes.h"
+#include "data_view.h"
 #include "date_tables.h"
 #include "invariant.h"
 #include "kinds.h"
@@ -747,7 +748,7 @@ static_assert(sizeof(ZoneFormat) <= sizeof(mlocZoneFormatter), "a zone formatter
 mlocResult mlocInitZoneFormatter(const mlocDataSet* data, const mlocLocale* locale,
                                  mlocZoneStyle style, mlocZoneFormatter* formatterOut)
 {
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         style <= mloc_zoneStyleNone || style > mloc_zoneStyleOffsetShort)
     {
         return mloc_errorInvalid;

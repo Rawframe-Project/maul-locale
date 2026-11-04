@@ -191,7 +191,7 @@ mlocResult mlocInitSpelloutFormatter(const mlocDataSet* data, const mlocLocale* 
                                      const mlocSpelloutOptions* options,
                                      mlocSpelloutFormatter* formatterOut)
 {
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         (ruleSet == nullptr && length != 0) || (ruleSet != nullptr && length == 0) ||
         !ValidOptions(options))
     {
@@ -216,7 +216,7 @@ mlocResult mlocInitNumberingSystemFormatter(const mlocDataSet* data, const mlocL
                                             const mlocSpelloutOptions* options,
                                             mlocSpelloutFormatter* formatterOut)
 {
-    if (formatterOut == nullptr || data == nullptr || !mlocLocaleValid(locale) ||
+    if (formatterOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
         system == nullptr || !ValidOptions(options))
     {
         return mloc_errorInvalid;
@@ -412,7 +412,7 @@ static size_t VisitSets(const mlocDataSet* data, const mlocLocale* locale, size_
 
 size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* locale)
 {
-    if (data == nullptr || !mlocLocaleValid(locale))
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale))
     {
         return 0;
     }
@@ -422,7 +422,8 @@ size_t mlocGetSpelloutRuleSetCount(const mlocDataSet* data, const mlocLocale* lo
 mlocResult mlocGetSpelloutRuleSet(const mlocDataSet* data, const mlocLocale* locale, size_t index,
                                   const char** nameOut, size_t* lengthOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || nameOut == nullptr || lengthOut == nullptr)
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || nameOut == nullptr ||
+        lengthOut == nullptr)
     {
         return mloc_errorInvalid;
     }

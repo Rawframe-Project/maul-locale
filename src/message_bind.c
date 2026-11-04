@@ -6,6 +6,7 @@
 #include "message_bind.h"
 
 #include "bytes.h"
+#include "data_view.h"
 #include "invariant.h"
 #include "locale_valid.h"
 #include "message_text.h"
@@ -121,7 +122,7 @@ mlocResult mlocInitMessageFormatter(const mlocDataSet* data, const mlocLocale* l
                                     const mlocMessageOptions* options,
                                     mlocMessageFormatter* formatterOut)
 {
-    if (formatterOut == NULL || data == NULL || !mlocLocaleValid(locale))
+    if (formatterOut == NULL || !mlocValidDataSet(data) || !mlocLocaleValid(locale))
     {
         return mloc_errorInvalid;
     }

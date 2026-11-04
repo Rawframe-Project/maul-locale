@@ -466,7 +466,7 @@ static bool OpenParents(const mlocDataSet* data, Parents* parents)
 mlocResult mlocGetParentLocale(const mlocDataSet* data, mlocComponent component,
                                const mlocLocale* locale, mlocLocale* parentOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || parentOut == nullptr ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || parentOut == nullptr ||
         (uint32_t)component > mloc_componentGrammar)
     {
         return mloc_errorInvalid;
@@ -575,7 +575,11 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
     {
         for (size_t s = 0; s < data->count; s++)
         {
-            DataView view = mlocViewOf(&data->sources[s]);
+            DataView view;
+            if (!mlocReadView(&data->sources[s], &view))
+            {
+                continue;
+            }
             uint32_t index = 0;
             DataSpan span;
             bool none = false;
@@ -609,7 +613,11 @@ static inline bool VisitChain(const mlocDataSet* data, mlocComponent component,
     {
         for (size_t s = 0; s < data->count; s++)
         {
-            DataView view = mlocViewOf(&data->sources[s]);
+            DataView view;
+            if (!mlocReadView(&data->sources[s], &view))
+            {
+                continue;
+            }
             uint32_t index = 0;
             if ((s >= 32 || (without >> s & 1) == 0) &&
                 mlocFindDataLocale(&view, w.key, w.length, &index) &&
@@ -634,7 +642,11 @@ bool mlocVisitLocaleChainOf(const mlocDataSet* data, mlocComponent component, ui
     uint32_t without = 0;
     for (size_t s = 0; s < data->count && s < 32; s++)
     {
-        DataView view = mlocViewOf(&data->sources[s]);
+        DataView view;
+        if (!mlocReadView(&data->sources[s], &view))
+        {
+            continue;
+        }
         without |= mlocDataHasKind(&view, kind) ? 0 : 1u << s;
     }
     return VisitChain(data, component, locale, without, visit, context);

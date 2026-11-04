@@ -584,8 +584,9 @@ mlocResult mlocGetUnitPreference(const mlocDataSet* data, const mlocLocale* loca
                                  const mlocPrecision* precision, mlocOutput* unitOut,
                                  mlocUnitAmounts* amountsOut)
 {
-    if (data == nullptr || !mlocLocaleValid(locale) || unit == nullptr || value == nullptr ||
-        unitOut == nullptr || amountsOut == nullptr || (usage == nullptr && usageLength > 0) ||
+    if (!mlocValidDataSet(data) || !mlocLocaleValid(locale) || unit == nullptr ||
+        value == nullptr || unitOut == nullptr || amountsOut == nullptr ||
+        (usage == nullptr && usageLength > 0) ||
         (unitOut->buffer == nullptr && unitOut->capacity > 0) || !mlocValidDecimal(value) ||
         (precision != nullptr && !mlocValidPrecision(precision)))
     {

@@ -37,7 +37,11 @@ static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* ver
 {
     for (size_t i = 0; i < data->count; i++)
     {
-        DataView view = mlocViewOf(&data->sources[i]);
+        DataView view;
+        if (!mlocReadView(&data->sources[i], &view))
+        {
+            continue;
+        }
         DataSpan span = {0};
         if (mlocFindDataUnit(&view, kindCollationRoot, dataNoLocale, &span))
         {
@@ -348,7 +352,11 @@ static bool FindHan(const mlocDataSet* data, Collator* c)
 {
     for (size_t i = 0; i < data->count; i++)
     {
-        DataView view = mlocViewOf(&data->sources[i]);
+        DataView view;
+        if (!mlocReadView(&data->sources[i], &view))
+        {
+            continue;
+        }
         DataSpan span = {0};
         if (mlocFindDataUnit(&view, kindCollationHanRadical, dataNoLocale, &span))
         {
@@ -410,7 +418,8 @@ mlocResult mlocInitCollator(const mlocDataSet* data, const mlocLocale* locale,
                             const mlocCollatorOptions* options, mlocCollator* collatorOut)
 {
     mlocCollatorOptions o = options != nullptr ? *options : (mlocCollatorOptions){0};
-    if (collatorOut == nullptr || data == nullptr || !mlocLocaleValid(locale) || !OptionsValid(&o))
+    if (collatorOut == nullptr || !mlocValidDataSet(data) || !mlocLocaleValid(locale) ||
+        !OptionsValid(&o))
     {
         return mloc_errorInvalid;
     }
