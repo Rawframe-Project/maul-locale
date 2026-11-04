@@ -348,6 +348,24 @@ if(MAUL_LOCALE_BUILD_TESTS)
                                    MLOC_RELATIVE_FILE="${MLOC_WORDS_RELATIVE}"
                                    MLOC_UNITS_FILE="${MLOC_WORDS_UNITS}")
     endif()
+    # Formatters' bool and enumeration bytes forged; a white-box test, so
+    # not built with the shared library.
+    maul_add_test(forged_formatters WHITEBOX)
+    if(TARGET test_forged_formatters)
+        set(MLOC_FORGED_SPELLOUT ${PROJECT_SOURCE_DIR}/src/generated/spellout.mloc)
+        set(MLOC_FORGED_UNITS ${PROJECT_SOURCE_DIR}/src/generated/units.mloc)
+        if(EMSCRIPTEN)
+            target_link_options(test_forged_formatters PRIVATE "SHELL:--embed-file ${MLOC_FORGED_SPELLOUT}@/spellout.mloc"
+                                "SHELL:--embed-file ${MLOC_FORGED_UNITS}@/units.mloc")
+            set(MLOC_FORGED_SPELLOUT /spellout.mloc)
+            set(MLOC_FORGED_UNITS /units.mloc)
+        endif()
+        if(WIN32)
+            target_compile_definitions(test_forged_formatters PRIVATE _CRT_SECURE_NO_WARNINGS)
+        endif()
+        target_compile_definitions(test_forged_formatters PRIVATE MLOC_SPELLOUT_FILE="${MLOC_FORGED_SPELLOUT}"
+                                   MLOC_UNITS_FILE="${MLOC_FORGED_UNITS}")
+    endif()
     # They read the spell-out rules, which numbers are spoken by.
     foreach(test grammar grammar_turkic grammar_hu grammar_fi grammar_ko message_grammar)
         maul_add_test(${test})

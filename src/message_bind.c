@@ -167,8 +167,14 @@ bool mlocReadMessageFormatter(const mlocMessageFormatter* formatter, MessageForm
     {
         return false;
     }
+    if (!mlocFlagAt(formatter, offsetof(MessageFormatter, strict)) ||
+        !mlocFlagAt(formatter, offsetof(MessageFormatter, isolate)) ||
+        !mlocFlagAt(formatter, offsetof(MessageFormatter, hasZone)))
+    {
+        return false;
+    }
     memcpy(out, formatter, sizeof *out);
-    return out->stamp == formatterStamp;
+    return out->stamp == formatterStamp && (uint32_t)out->direction <= mloc_directionRightToLeft;
 }
 
 bool mlocReadBound(const void* bound, BoundHeader* headerOut, MessageFormatter* formatterOut)
