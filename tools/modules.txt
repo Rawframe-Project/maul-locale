@@ -164,6 +164,7 @@ message_write: invariant message_form message_read message_text
 message_cost: bytes invariant message_form message_read
 message_bind: bytes data_view invariant locale_valid message_cost message_form message_read message_text
 message_number: decimal invariant number_precision
+message_number_write: invariant message_number
 message_offset: invariant message_number
 message_words: invariant message_number
 message_duration: invariant message_number
