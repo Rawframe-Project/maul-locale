@@ -7,19 +7,51 @@ may change the API, the ABI and every data format.
 
 ## [0.12.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.0...v0.12.1) (2026-11-04)
 
-
 ### Fixed
 
-* **catalog:** refuse a catalog whose source flag is neither 0 nor 1 ([#480](https://github.com/Rawframe-Project/maul-locale/issues/480)) ([d7f91f0](https://github.com/Rawframe-Project/maul-locale/commit/d7f91f0b9486cd9a99654e27a36b181fc050179d))
-* **catalog:** refuse a chain whose counts or cache pass their bounds ([#473](https://github.com/Rawframe-Project/maul-locale/issues/473)) ([c829fda](https://github.com/Rawframe-Project/maul-locale/commit/c829fda644318e10d684faa85abcafe139243839)), closes [#468](https://github.com/Rawframe-Project/maul-locale/issues/468)
-* **collate:** refuse a collator claiming more ranges than it holds ([#471](https://github.com/Rawframe-Project/maul-locale/issues/471)) ([591fbbd](https://github.com/Rawframe-Project/maul-locale/commit/591fbbda300af3e2f50caf0d846ac776d871bea8)), closes [#466](https://github.com/Rawframe-Project/maul-locale/issues/466)
-* **collate:** refuse a collator whose bool or kind bytes are forged ([#481](https://github.com/Rawframe-Project/maul-locale/issues/481)) ([986c3aa](https://github.com/Rawframe-Project/maul-locale/commit/986c3aa14a862ae18ab3c218236e45d6205bcb66)), closes [#477](https://github.com/Rawframe-Project/maul-locale/issues/477)
-* **index:** read an index only within the extent its header records ([#476](https://github.com/Rawframe-Project/maul-locale/issues/476)) ([d553bd0](https://github.com/Rawframe-Project/maul-locale/commit/d553bd0557c8ee78de09464abd845ba7f3d93fca)), closes [#470](https://github.com/Rawframe-Project/maul-locale/issues/470)
-* make MLOC_NODISCARD the attribute under GCC 14's C23 too ([#484](https://github.com/Rawframe-Project/maul-locale/issues/484)) ([c346644](https://github.com/Rawframe-Project/maul-locale/commit/c3466445d577b04342930e13054ddff6bdd09fb9)), closes [#483](https://github.com/Rawframe-Project/maul-locale/issues/483)
-* refuse forged bool and enum bytes in chains, segmenters, searchers ([#478](https://github.com/Rawframe-Project/maul-locale/issues/478)) ([3141f1a](https://github.com/Rawframe-Project/maul-locale/commit/3141f1a3ab1a28ea2db350719e1bc94b83c0a798))
-* refuse forged bool and enum bytes in formatters ([#479](https://github.com/Rawframe-Project/maul-locale/issues/479)) ([67336fa](https://github.com/Rawframe-Project/maul-locale/commit/67336fadeab3cbb9b9af2443bfe83d37c8699800))
-* **search:** refuse a searcher whose counts pass its arrays ([#475](https://github.com/Rawframe-Project/maul-locale/issues/475)) ([b63df5f](https://github.com/Rawframe-Project/maul-locale/commit/b63df5f497f1831a525a29e37da371c752acda05)), closes [#467](https://github.com/Rawframe-Project/maul-locale/issues/467)
-* **segment:** refuse a segmenter whose counts pass its arrays ([#474](https://github.com/Rawframe-Project/maul-locale/issues/474)) ([1f82d92](https://github.com/Rawframe-Project/maul-locale/commit/1f82d92a50d8826880a0b0c05bafaced59a36074)), closes [#469](https://github.com/Rawframe-Project/maul-locale/issues/469)
+- A collator, catalog chain, segmenter, searcher or alphabetic index
+  whose stored counts no longer matched its arrays was read past them.
+  Examples: a collator claiming more reorder ranges than it holds, a
+  chain whose catalog or cache key count passed its room, a segmenter
+  whose queue, window or class overrides passed theirs, a searcher with
+  a ring of no elements (a division by zero), and an index whose counts,
+  labels or boundaries passed the extent its header records. Each such
+  value is now refused with `mloc_errorInvalid` by every call that reads
+  it, and so is a searcher or index whose collator is not one. A
+  segmenter whose queue starts outside the text fed, and a chain or
+  segmenter in a state that stopped at an assertion in a build with
+  assertions on, are refused the same way. A forged value stays outside
+  the contract, but the library now checks every count and index it
+  stored before reading through it
+  ([#471](https://github.com/Rawframe-Project/maul-locale/pull/471),
+  [#473](https://github.com/Rawframe-Project/maul-locale/pull/473),
+  [#474](https://github.com/Rawframe-Project/maul-locale/pull/474),
+  [#475](https://github.com/Rawframe-Project/maul-locale/pull/475),
+  [#476](https://github.com/Rawframe-Project/maul-locale/pull/476)).
+- Collators, catalog chains, segmenters, searchers, catalogs and the
+  currency, unit, spell-out and message formatters read their `bool`
+  fields without checking the stored byte. A byte other than 0 or 1 made
+  that read undefined. Enumerations stored in bytes were not
+  range-checked either, so a chain could hand a caller a
+  `mlocCatalogResult` whose reason and position named nothing. Such a
+  value is now refused with `mloc_errorInvalid` before any of its flags
+  is read. The fields checked: a chain's cached reason and position; a
+  segmenter's flags, filters, Japanese class and terminator run; a
+  searcher's comparison; a message formatter's direction; a catalog's
+  source flag; and a collator's settings, strength, case order and fast
+  Latin options, including the collator a searcher or an index holds
+  ([#478](https://github.com/Rawframe-Project/maul-locale/pull/478),
+  [#479](https://github.com/Rawframe-Project/maul-locale/pull/479),
+  [#480](https://github.com/Rawframe-Project/maul-locale/pull/480),
+  [#481](https://github.com/Rawframe-Project/maul-locale/pull/481)).
+- `MLOC_NODISCARD` expanded to nothing under GCC 14. GCC reports its C23
+  mode as `__STDC_VERSION__` 202000L, and the macro looked for 202311L,
+  so a program built with GCC that dropped a status from any of the
+  library's functions got no warning. Any C dialect after C17 whose
+  compiler has the attribute now gets `[[nodiscard]]`, so such a program
+  warns under GCC as it already did under Clang, and fails to build with
+  `-Werror`. C17 and older dialects are unchanged
+  ([#484](https://github.com/Rawframe-Project/maul-locale/pull/484)).
 
 ## [0.12.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.11.0...v0.12.0) (2026-11-04)
 
