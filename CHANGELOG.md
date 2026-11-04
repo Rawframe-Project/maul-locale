@@ -5,6 +5,22 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.0...v0.12.1) (2026-11-04)
+
+
+### Fixed
+
+* **catalog:** refuse a catalog whose source flag is neither 0 nor 1 ([#480](https://github.com/Rawframe-Project/maul-locale/issues/480)) ([d7f91f0](https://github.com/Rawframe-Project/maul-locale/commit/d7f91f0b9486cd9a99654e27a36b181fc050179d))
+* **catalog:** refuse a chain whose counts or cache pass their bounds ([#473](https://github.com/Rawframe-Project/maul-locale/issues/473)) ([c829fda](https://github.com/Rawframe-Project/maul-locale/commit/c829fda644318e10d684faa85abcafe139243839)), closes [#468](https://github.com/Rawframe-Project/maul-locale/issues/468)
+* **collate:** refuse a collator claiming more ranges than it holds ([#471](https://github.com/Rawframe-Project/maul-locale/issues/471)) ([591fbbd](https://github.com/Rawframe-Project/maul-locale/commit/591fbbda300af3e2f50caf0d846ac776d871bea8)), closes [#466](https://github.com/Rawframe-Project/maul-locale/issues/466)
+* **collate:** refuse a collator whose bool or kind bytes are forged ([#481](https://github.com/Rawframe-Project/maul-locale/issues/481)) ([986c3aa](https://github.com/Rawframe-Project/maul-locale/commit/986c3aa14a862ae18ab3c218236e45d6205bcb66)), closes [#477](https://github.com/Rawframe-Project/maul-locale/issues/477)
+* **index:** read an index only within the extent its header records ([#476](https://github.com/Rawframe-Project/maul-locale/issues/476)) ([d553bd0](https://github.com/Rawframe-Project/maul-locale/commit/d553bd0557c8ee78de09464abd845ba7f3d93fca)), closes [#470](https://github.com/Rawframe-Project/maul-locale/issues/470)
+* make MLOC_NODISCARD the attribute under GCC 14's C23 too ([#484](https://github.com/Rawframe-Project/maul-locale/issues/484)) ([c346644](https://github.com/Rawframe-Project/maul-locale/commit/c3466445d577b04342930e13054ddff6bdd09fb9)), closes [#483](https://github.com/Rawframe-Project/maul-locale/issues/483)
+* refuse forged bool and enum bytes in chains, segmenters, searchers ([#478](https://github.com/Rawframe-Project/maul-locale/issues/478)) ([3141f1a](https://github.com/Rawframe-Project/maul-locale/commit/3141f1a3ab1a28ea2db350719e1bc94b83c0a798))
+* refuse forged bool and enum bytes in formatters ([#479](https://github.com/Rawframe-Project/maul-locale/issues/479)) ([67336fa](https://github.com/Rawframe-Project/maul-locale/commit/67336fadeab3cbb9b9af2443bfe83d37c8699800))
+* **search:** refuse a searcher whose counts pass its arrays ([#475](https://github.com/Rawframe-Project/maul-locale/issues/475)) ([b63df5f](https://github.com/Rawframe-Project/maul-locale/commit/b63df5f497f1831a525a29e37da371c752acda05)), closes [#467](https://github.com/Rawframe-Project/maul-locale/issues/467)
+* **segment:** refuse a segmenter whose counts pass its arrays ([#474](https://github.com/Rawframe-Project/maul-locale/issues/474)) ([1f82d92](https://github.com/Rawframe-Project/maul-locale/commit/1f82d92a50d8826880a0b0c05bafaced59a36074)), closes [#469](https://github.com/Rawframe-Project/maul-locale/issues/469)
+
 ## [0.12.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.11.0...v0.12.0) (2026-11-04)
 
 ### Changed
