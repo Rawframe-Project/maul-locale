@@ -5,6 +5,54 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.0...v0.12.1) (2026-11-04)
+
+### Fixed
+
+- A collator, catalog chain, segmenter, searcher or alphabetic index
+  whose stored counts no longer matched its arrays was read past them.
+  Examples: a collator claiming more reorder ranges than it holds, a
+  chain whose catalog or cache key count passed its room, a segmenter
+  whose queue, window or class overrides passed theirs, a searcher with
+  a ring of no elements (a division by zero), and an index whose counts,
+  labels or boundaries passed the extent its header records. Each such
+  value is now refused with `mloc_errorInvalid` by every call that reads
+  it, and so is a searcher or index whose collator is not one. A
+  segmenter whose queue starts outside the text fed, and a chain or
+  segmenter in a state that stopped at an assertion in a build with
+  assertions on, are refused the same way. A forged value stays outside
+  the contract, but the library now checks every count and index it
+  stored before reading through it
+  ([#471](https://github.com/Rawframe-Project/maul-locale/pull/471),
+  [#473](https://github.com/Rawframe-Project/maul-locale/pull/473),
+  [#474](https://github.com/Rawframe-Project/maul-locale/pull/474),
+  [#475](https://github.com/Rawframe-Project/maul-locale/pull/475),
+  [#476](https://github.com/Rawframe-Project/maul-locale/pull/476)).
+- Collators, catalog chains, segmenters, searchers, catalogs and the
+  currency, unit, spell-out and message formatters read their `bool`
+  fields without checking the stored byte. A byte other than 0 or 1 made
+  that read undefined. Enumerations stored in bytes were not
+  range-checked either, so a chain could hand a caller a
+  `mlocCatalogResult` whose reason and position named nothing. Such a
+  value is now refused with `mloc_errorInvalid` before any of its flags
+  is read. The fields checked: a chain's cached reason and position; a
+  segmenter's flags, filters, Japanese class and terminator run; a
+  searcher's comparison; a message formatter's direction; a catalog's
+  source flag; and a collator's settings, strength, case order and fast
+  Latin options, including the collator a searcher or an index holds
+  ([#478](https://github.com/Rawframe-Project/maul-locale/pull/478),
+  [#479](https://github.com/Rawframe-Project/maul-locale/pull/479),
+  [#480](https://github.com/Rawframe-Project/maul-locale/pull/480),
+  [#481](https://github.com/Rawframe-Project/maul-locale/pull/481)).
+- `MLOC_NODISCARD` expanded to nothing under GCC 14. GCC reports its C23
+  mode as `__STDC_VERSION__` 202000L, and the macro looked for 202311L,
+  so a program built with GCC that dropped a status from any of the
+  library's functions got no warning. Any C dialect after C17 whose
+  compiler has the attribute now gets `[[nodiscard]]`, so such a program
+  warns under GCC as it already did under Clang, and fails to build with
+  `-Werror`. C17 and older dialects are unchanged
+  ([#484](https://github.com/Rawframe-Project/maul-locale/pull/484)).
+
 ## [0.12.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.11.0...v0.12.0) (2026-11-04)
 
 ### Changed
