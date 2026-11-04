@@ -5,6 +5,35 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.11.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.10.0...v0.11.0) (2026-11-03)
+
+### Changed
+
+- **Breaking: a long spelled-out number in a date is written whole.**
+  A date whose pattern spells out a number field (a numbering system
+  override naming spell-out rules, such as `haw`'s month) wrote the
+  number in digits, and reported nothing, when the spelled-out text
+  passed 256 bytes. It now writes the spelled-out text whole: with
+  spell-out rules that give 300 letters for October, `haw`'s short date of
+  2026-10-15 gave `15/10/26` and now gives the 300 letters between
+  `15/` and `/26`
+  ([#449](https://github.com/Rawframe-Project/maul-locale/pull/449)).
+- **Breaking: a zoned argument with a long zone identifier is written
+  whole.** `mlocFormatMessage` wrote a zoned date-time argument with no
+  function (`{$x}`) as its fallback, with an Unsupported Operation
+  fault (`mloc_errorFallback` in strict mode), when its zone's
+  identifier was longer than about 90 bytes, which only a zones file a
+  host loads can give. It now writes the argument's ISO 8601 text
+  whole, up to a 255-byte identifier
+  ([#450](https://github.com/Rawframe-Project/maul-locale/pull/450)).
+- **Breaking: relative time writes long names and patterns.**
+  `mlocRelativeFormatter_Format` and
+  `mlocRelativeFormatter_FormatDayTime` returned `mloc_errorFormat`, a
+  status neither header lists, when the name ("tomorrow") or pattern
+  ("in {0} days") they write from a relative time unit was longer than
+  256 bytes. They now write it whole, with the same parts as a short
+  one ([#454](https://github.com/Rawframe-Project/maul-locale/pull/454)).
+
 ## [0.10.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.9.0...v0.10.0) (2026-11-03)
 
 ### Changed
