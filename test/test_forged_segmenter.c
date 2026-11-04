@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A segmenter whose stamp is right but whose stored counts are not
-// (the library checks every index it stores): a queue or window
-// past its room, a window longer than the text before the piece, a kind
-// that is none, and overrides that are not a set of the code table whole,
-// are refused by every call, which then reads none of them; so are a
+// A segmenter whose stamp is right but whose stored counts or bytes are
+// not (the library checks every index, bool and enumeration byte it
+// stores): a queue or window past its room, a window longer than the text
+// before the piece, a kind that is none, overrides that are not a set of
+// the code table whole, a bool's byte of 2, and filters, a class or a
+// terminator run that is none, are refused by every call, which then
+// reads none of them; so are a
 // queue that starts past the text fed or fills the queue, a piece start
 // moved past the text a Japanese filter reads, and a break left waiting
 // after the iterator ended, each of which reached an assertion, and a
@@ -19,6 +21,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/segment.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -52,6 +55,16 @@ enum
     forgedKind,
     forgedNullOverrides,
     forgedOverrideCount,
+    forgedStarted,
+    forgedIteratorWaits,
+    forgedMoreFollows,
+    forgedIteratorDone,
+    forgedBusy,
+    forgedHeldSuppressed,
+    forgedHeldValid,
+    forgedFilters,
+    forgedCursorClass,
+    forgedScanRun,
     forgedCount,
 };
 
@@ -62,11 +75,35 @@ static const char* const s_forgeries[forgedCount] = {
     "a kind that is none",
     "overrides counted with none there",
     "a set of overrides counted past its end",
+    "a started byte of 2",
+    "an iterator waits byte of 2",
+    "a more follows byte of 2",
+    "an iterator done byte of 2",
+    "a busy byte of 2",
+    "a held suppressed byte of 2",
+    "a held valid byte of 2",
+    "filters that are no set made",
+    "a Japanese class that is none",
+    "a terminator run that is none",
+};
+
+// The bool fields' offsets, from forgedStarted on.
+static const size_t s_flags[] = {
+    offsetof(Segmenter, started),     offsetof(Segmenter, iteratorWaits),
+    offsetof(Segmenter, moreFollows), offsetof(Segmenter, iteratorDone),
+    offsetof(Segmenter, busy),        offsetof(Segmenter, heldSuppressed),
+    offsetof(Segmenter, heldValid),
 };
 
 static void Forge(Segmenter* s, int how)
 {
     const SegmentOverrideSet* set = &mlocSegmentOverrideSets[0];
+    uint8_t* bytes = (uint8_t*)s;
+    if (how >= forgedStarted && how <= forgedHeldValid)
+    {
+        bytes[s_flags[how - forgedStarted]] = 2;
+        return;
+    }
     switch (how)
     {
     case forgedQueue:
@@ -86,9 +123,18 @@ static void Forge(Segmenter* s, int how)
         s->overrides = nullptr;
         s->overrideCount = 1;
         break;
-    default:
+    case forgedOverrideCount:
         s->overrides = mlocSegmentOverrides + set->first;
         s->overrideCount = set->count + 1u;
+        break;
+    case forgedFilters:
+        s->filters = segmentSuppress | segmentJapanese;
+        break;
+    case forgedCursorClass:
+        s->cursorClass = japaneseIdeographic + 1;
+        break;
+    default:
+        s->scanRun = 3;
         break;
     }
 }
