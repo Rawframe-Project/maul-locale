@@ -175,10 +175,36 @@ mlocResult mlocInitSegmenter(const mlocDataSet* data, const mlocLocale* locale,
     return mloc_success;
 }
 
+// Whether a segmenter's overrides are none, or one set of the code table
+// whole.
+static bool KnownOverrides(const Segmenter* s)
+{
+    if (s->overrides == nullptr)
+    {
+        return s->overrideCount == 0;
+    }
+    for (uint32_t i = 0; i < mlocSegmentOverrideSetCount; i++)
+    {
+        const SegmentOverrideSet* set = &mlocSegmentOverrideSets[i];
+        if (s->overrides == mlocSegmentOverrides + set->first && s->overrideCount == set->count)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A segmenter the library made; null for any other, and for one whose
+// counts pass the arrays and table they index, which the filters
+// read before anything else.
 static Segmenter* Made(mlocSegmenter* segmenter)
 {
     Segmenter* s = (Segmenter*)segmenter;
-    return s != nullptr && s->stamp == segmenterStamp ? s : nullptr;
+    return s != nullptr && s->stamp == segmenterStamp && s->kind <= mloc_segmentLine &&
+                   s->queueCount <= segmentQueue && s->windowLength <= segmentWindow &&
+                   s->windowLength <= s->pieceStart && KnownOverrides(s)
+               ? s
+               : nullptr;
 }
 
 mlocResult mlocSegmenter_SetComplexBreaker(mlocSegmenter* segmenter,
