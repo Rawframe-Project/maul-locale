@@ -33,22 +33,26 @@ static uint32_t Word(const uint8_t* words, uint32_t index)
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
+// The declaration binding a variable, or messageUnbound; a variable past
+// the count, named by bytes changed since the bind, is unbound.
 static uint32_t BoundBy(const Resolution* r, uint32_t variable)
 {
-    MLOC_ASSERT(variable < r->h.view.count[messageVariables]);
-    uint32_t d = Word(r->words, variable);
+    uint32_t d =
+        variable < r->h.view.count[messageVariables] ? Word(r->words, variable) : messageUnbound;
     return d < r->h.view.count[messageDeclarations] ? d : messageUnbound;
 }
 
+// An expression's function slot; none for one past the count.
 static uint32_t SlotOf(const Resolution* r, uint32_t expression)
 {
-    MLOC_ASSERT(expression < r->h.view.count[messageExpressions]);
-    return Word(r->words, r->h.view.count[messageVariables] + expression) & 0xFFFFFF;
+    return expression < r->h.view.count[messageExpressions]
+               ? Word(r->words, r->h.view.count[messageVariables] + expression) & 0xFFFFFF
+               : messageFunctionNone;
 }
 
-static const uint8_t* Pool(const Resolution* r, uint32_t offset)
+static MessageText String(const Resolution* r, uint32_t kind, uint32_t index, uint32_t field)
 {
-    return r->h.view.pool + offset;
+    return mlocMessageString(&r->h.view, kind, index, field);
 }
 
 void mlocReportFault(Resolution* r, mlocMessageFaultKind kind, uint32_t at)
@@ -74,11 +78,10 @@ MLOC_NOINLINE static const mlocMessageValue* Argument(Resolution* r, uint32_t va
         r->dynamic = r->dynamic || r->optionDepth > 0;
         return r->optionDepth > 0 ? NULL : r->probeArgument;
     }
-    const uint8_t* name = Pool(r, Field(r, messageVariables, variable, 0));
-    size_t length = Field(r, messageVariables, variable, 1);
+    MessageText name = String(r, messageVariables, variable, 0);
     for (size_t i = 0; i < r->argumentCount; i++)
     {
-        if (mlocSameName(&r->arguments[i], name, length))
+        if (mlocSameName(&r->arguments[i], name.text, name.length))
         {
             return &r->arguments[i].value;
         }
@@ -136,9 +139,9 @@ Value mlocExpressionFallback(const Resolution* r, uint32_t expression)
         return FallbackVariable(Field(r, messageExpressions, expression, 1));
     }
     Value v = Make(operand == operandLiteral ? valueFallbackLiteral : valueFallbackFunction);
-    uint32_t field = operand == operandLiteral ? 1 : 3;
-    v.text = Pool(r, Field(r, messageExpressions, expression, field));
-    v.length = Field(r, messageExpressions, expression, field + 1);
+    MessageText text = String(r, messageExpressions, expression, operand == operandLiteral ? 1 : 3);
+    v.text = text.text;
+    v.length = text.length;
     return v;
 }
 
@@ -176,11 +179,12 @@ static void VariableInto(Resolution* r, uint32_t variable, uint32_t at, uint32_t
         ArgumentInto(r, variable, at, out);
         return;
     }
-    // Binding refused a declaration naming its own expression or a later
-    // one, so an operand's chain only goes back and ends; the reported
-    // bits cover the declarations a bound message may have.
-    MLOC_ASSERT(within == UINT32_MAX || Field(r, messageDeclarations, d, 2) < within);
+    // Binding refused a chain that loops or passes MLOC_MAX_MESSAGE_CHAIN;
+    // bytes changed since may loop, and a chain that deep ends the
+    // resolutions as running out does. The reported bits cover the
+    // declarations a bound message may have.
     MLOC_ASSERT(d < MLOC_MAX_MESSAGE_DECLARATIONS);
+    r->budget = r->depth < MLOC_MAX_MESSAGE_CHAIN ? r->budget : 0;
     // Call-by-name resolves a declaration at each reference; its faults
     // are reported the first time it is resolved aloud, and quietly
     // after.
@@ -191,7 +195,9 @@ static void VariableInto(Resolution* r, uint32_t variable, uint32_t at, uint32_t
         r->reported[d / 8] |= bit;
     }
     r->quiet += again;
+    r->depth++;
     ResolveInto(r, Field(r, messageDeclarations, d, 2), out);
+    r->depth--;
     r->quiet -= again;
     if (IsFallback(out->kind))
     {
@@ -230,16 +236,16 @@ MLOC_NOINLINE static void CheckParameters(Resolution* r, uint32_t first, uint32_
 static bool OptionNamed(const Resolution* r, uint32_t p, const char* name, size_t length)
 {
     uint32_t kind = Field(r, messageParameters, p, 0);
+    MessageText option = String(r, messageParameters, p, 1);
     return (kind == parameterOptionLiteral || kind == parameterOptionVariable) &&
-           Field(r, messageParameters, p, 2) == length &&
-           memcmp(Pool(r, Field(r, messageParameters, p, 1)), name, length) == 0;
+           option.length == length && memcmp(option.text, name, length) == 0;
 }
 
 // Whether a parameter's name is in the u: namespace, the library's.
 bool mlocUnicodeOption(const Resolution* r, uint32_t p)
 {
-    return Field(r, messageParameters, p, 2) > 2 &&
-           memcmp(Pool(r, Field(r, messageParameters, p, 1)), "u:", 2) == 0;
+    MessageText name = String(r, messageParameters, p, 1);
+    return name.length > 2 && memcmp(name.text, "u:", 2) == 0;
 }
 
 // An option's value: a literal's text, or its variable's value resolved
@@ -249,8 +255,9 @@ Value mlocOptionValue(Resolution* r, uint32_t p, uint32_t at)
     if (Field(r, messageParameters, p, 0) == parameterOptionLiteral)
     {
         Value v = Make(valueText);
-        v.text = Pool(r, Field(r, messageParameters, p, 3));
-        v.length = Field(r, messageParameters, p, 4);
+        MessageText text = String(r, messageParameters, p, 3);
+        v.text = text.text;
+        v.length = text.length;
         return v;
     }
     r->quiet++;
@@ -282,8 +289,8 @@ static bool TextIs(const Value* v, const char* text)
 // ignored (a failed variable already was). Other u: options are ignored.
 MLOC_NOINLINE static Directed UnicodeOptions(Resolution* r, uint32_t expression)
 {
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageExpressions, expression, 5, &first);
     uint32_t at = Field(r, messageExpressions, expression, 7);
     Directed d = {false, mloc_directionUnknown, false};
     for (uint32_t p = first; p < first + count; p++)
@@ -331,8 +338,8 @@ MLOC_NOINLINE static Directed UnicodeOptions(Resolution* r, uint32_t expression)
 
 void mlocResolveMarkup(Resolution* r, uint32_t markup)
 {
-    uint32_t first = Field(r, messageMarkups, markup, 3);
-    uint32_t count = Field(r, messageMarkups, markup, 4);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageMarkups, markup, 3, &first);
     uint32_t at = Field(r, messageMarkups, markup, 5);
     CheckParameters(r, first, count, at);
     for (uint32_t p = first; p < first + count; p++)
@@ -572,8 +579,8 @@ MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, con
         mlocReportFault(r, fault, at);
         return mlocExpressionFallback(r, expression);
     }
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageExpressions, expression, 5, &first);
     uint32_t found = 0;
     int32_t delta = 0;
     bool reported = false;
@@ -581,11 +588,10 @@ MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, con
     for (uint32_t p = first; p < first + count; p++)
     {
         uint32_t kind = Field(r, messageParameters, p, 0);
-        const uint8_t* name = Pool(r, Field(r, messageParameters, p, 1));
-        size_t length = Field(r, messageParameters, p, 2);
-        bool add = length == 3 && memcmp(name, "add", 3) == 0;
+        MessageText name = String(r, messageParameters, p, 1);
+        bool add = name.length == 3 && memcmp(name.text, "add", 3) == 0;
         if ((kind != parameterOptionLiteral && kind != parameterOptionVariable) ||
-            (!add && !(length == 8 && memcmp(name, "subtract", 8) == 0)))
+            (!add && !(name.length == 8 && memcmp(name.text, "subtract", 8) == 0)))
         {
             continue;
         }
@@ -625,8 +631,8 @@ MLOC_NOINLINE static Value ResolveOffset(Resolution* r, uint32_t expression, con
 static void SetOptions(Resolution* r, uint32_t expression, uint32_t at, OptionSetter set,
                        void* context)
 {
-    uint32_t first = Field(r, messageExpressions, expression, 5);
-    uint32_t count = Field(r, messageExpressions, expression, 6);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageExpressions, expression, 5, &first);
     for (uint32_t p = first; p < first + count; p++)
     {
         uint32_t kind = Field(r, messageParameters, p, 0);
@@ -637,9 +643,8 @@ static void SetOptions(Resolution* r, uint32_t expression, uint32_t at, OptionSe
         }
         bool failed = false;
         NumberOption option = NumberOptionAt(r, p, at, &failed);
-        mlocMessageFaultKind fault =
-            set(context, Pool(r, Field(r, messageParameters, p, 1)),
-                Field(r, messageParameters, p, 2), failed ? NULL : &option);
+        MessageText name = String(r, messageParameters, p, 1);
+        mlocMessageFaultKind fault = set(context, name.text, name.length, failed ? NULL : &option);
         if (fault != mloc_messageFaultNone)
         {
             mlocReportFault(r, fault, at);
@@ -866,8 +871,9 @@ MLOC_NOINLINE static void Apply(Resolution* r, uint32_t expression, uint32_t slo
         *out = mlocExpressionFallback(r, expression);
         return;
     }
-    CheckParameters(r, Field(r, messageExpressions, expression, 5),
-                    Field(r, messageExpressions, expression, 6), at);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageExpressions, expression, 5, &first);
+    CheckParameters(r, first, count, at);
     Directed d = UnicodeOptions(r, expression);
     Value v;
     if (slot == messageFunctionString)
@@ -969,8 +975,9 @@ static void ResolveInto(Resolution* r, uint32_t expression, Value* out)
         SetKind(into, valueText);
         if (operandKind == operandLiteral)
         {
-            into->text = Pool(r, Field(r, messageExpressions, expression, 1));
-            into->length = Field(r, messageExpressions, expression, 2);
+            MessageText text = String(r, messageExpressions, expression, 1);
+            into->text = text.text;
+            into->length = text.length;
         }
     }
     if (slot != messageFunctionNone)

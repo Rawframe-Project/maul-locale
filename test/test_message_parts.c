@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static mlocDataSet s_data;
@@ -407,6 +408,109 @@ static void TestTiling(void)
     }
 }
 
+// Formats a bound message and reads its parts' records, the message's
+// bytes changed since the bind; whether each call gave a status it may.
+static bool Survives(const mlocMessageArgument* arguments, size_t count)
+{
+    Parts parts;
+    memset(&parts, 0, sizeof parts);
+    mlocMessageFault list[4];
+    mlocMessageFaults faults = {list, 4, 0};
+    mlocOutput output = {s_text, sizeof s_text, 0, Collect, &parts};
+    mlocResult r = mlocFormatMessage(s_bound, arguments, count, &output, &faults);
+    bool good = r == mloc_success || r == mloc_withFallbacks || r == mloc_errorCapacity ||
+                r == mloc_errorInvalid || r == mloc_errorLimit;
+    for (size_t i = 0; i < parts.count && i < sizeof parts.list / sizeof parts.list[0]; i++)
+    {
+        mlocMessagePartInfo info;
+        mlocMessageParameter parameter;
+        uint32_t part = parts.list[i].kind;
+        r = mlocGetMessagePartInfo(s_bound, part, &info);
+        good = good && (r == mloc_success || r == mloc_errorInvalid);
+        for (uint32_t p = 0; r == mloc_success && p < info.parameterCount && p < 8; p++)
+        {
+            good =
+                good && mlocGetMessagePartParameter(s_bound, part, p, &parameter) == mloc_success;
+        }
+        mlocResult found = mlocFindMessagePartOption(s_bound, part, "u:id", 4, &parameter);
+        good = good &&
+               (found == mloc_success || found == mloc_errorNotFound || found == mloc_errorInvalid);
+    }
+    return good;
+}
+
+// A bound message whose compiled bytes the caller changed afterwards, as
+// it must not: whatever they hold, formatting and the part accessors read
+// within them and return. The bytes are on the heap at their exact size,
+// so that a read past them is caught under the address sanitizer.
+static void TestChangedAfterBind(void)
+{
+    static const char message[] =
+        ".input {$n :number}\n"
+        ".local $a = {$x :number minimumFractionDigits=1 u:id=a}\n"
+        ".local $b = {$a :integer}\n"
+        ".match $n $b\n"
+        "1 * {{one {$a} {#m title=$a k=|v| @at}x{/m} {|lit| :string} {$y}}}\n"
+        "* * {{other {$b} {$y} text}}";
+    mlocMessageArgument arguments[] = {
+        {"n", 1, {mloc_messageValueString, 0, {.string = {"1", 1}}}},
+        {"x", 1, {mloc_messageValueString, 0, {.string = {"2.5", 3}}}},
+        {"y", 1, {mloc_messageValueString, 0, {.string = {"why", 3}}}},
+    };
+    size_t size = 0;
+    size_t bound = 0;
+    mlocMessageError error;
+    CHECK(mlocCompileMessage(message, strlen(message), s_compiled, sizeof s_compiled, &size, &error)
+                  .status == mloc_success,
+          "the message compiles");
+    uint8_t* bytes = malloc(size);
+    uint8_t* kept = malloc(size);
+    if (bytes == NULL || kept == NULL)
+    {
+        free(bytes);
+        free(kept);
+        CHECK(false, "the message's copies are made");
+        return;
+    }
+    memcpy(bytes, s_compiled, size);
+    memcpy(kept, s_compiled, size);
+    CHECK(mlocMessageFormatter_Bind(&s_plain, bytes, size, s_bound, sizeof s_bound, &bound) ==
+                  mloc_success &&
+              Survives(arguments, 3),
+          "the message binds and formats");
+    // Each 32-bit word set to values that name records and strings past
+    // the message's, or loop back to a declaration being resolved.
+    static const uint32_t words[] = {0, 1, 2, 3, 0x7FFFFFFF, 0x80000000, 0xFFFFFFFF};
+    bool survived = true;
+    for (size_t at = 0; at + 4 <= size; at += 4)
+    {
+        for (size_t w = 0; w < sizeof words / sizeof words[0]; w++)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                bytes[at + (size_t)i] = (uint8_t)(words[w] >> (8 * i));
+            }
+            survived = survived && Survives(arguments, 3);
+            memcpy(bytes + at, kept + at, 4);
+        }
+    }
+    CHECK(survived, "any word changed, formatting and the accessors read within the message");
+    // Each byte set to bytes that are not well-formed UTF-8 there.
+    static const uint8_t lone[] = {0x80, 0xC3, 0xF0, 0xFF};
+    for (size_t at = 0; at < size; at++)
+    {
+        for (size_t b = 0; b < sizeof lone; b++)
+        {
+            bytes[at] = lone[b];
+            survived = survived && Survives(arguments, 3);
+        }
+        bytes[at] = kept[at];
+    }
+    CHECK(survived, "any byte changed, the same");
+    free(bytes);
+    free(kept);
+}
+
 int main(void)
 {
     static mlocData sources[2];
@@ -438,6 +542,7 @@ int main(void)
     TestProgramParts();
     TestNoParts();
     TestAccess();
+    TestChangedAfterBind();
     TestTiling();
     return s_failures == 0 ? 0 : 1;
 }

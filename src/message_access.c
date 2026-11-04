@@ -47,8 +47,7 @@ static void Parameters(const BoundHeader* h, uint32_t kind, uint32_t index, uint
                        uint32_t* countOut)
 {
     uint32_t field = kind == messageExpressions ? 5 : 3;
-    *firstOut = mlocMessageField(&h->view, kind, index, field);
-    *countOut = mlocMessageField(&h->view, kind, index, field + 1);
+    *countOut = mlocMessageRange(&h->view, kind, index, field, messageParameters, firstOut);
 }
 
 mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part, mlocMessagePartInfo* infoOut)
@@ -62,11 +61,9 @@ mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part, mlocMessageP
     }
     // An expression's function is its fields 3 and 4, a markup's name
     // its fields 1 and 2.
-    uint32_t field = kind == messageExpressions ? 3 : 1;
-    infoOut->nameLength = mlocMessageField(&h.view, kind, index, field + 1);
-    infoOut->name = infoOut->nameLength == 0
-                        ? NULL
-                        : (const char*)h.view.pool + mlocMessageField(&h.view, kind, index, field);
+    MessageText name = mlocMessageString(&h.view, kind, index, kind == messageExpressions ? 3 : 1);
+    infoOut->nameLength = name.length;
+    infoOut->name = name.length == 0 ? NULL : (const char*)name.text;
     uint32_t first = 0;
     Parameters(&h, kind, index, &first, &infoOut->parameterCount);
     return mloc_success;
@@ -75,29 +72,25 @@ mlocResult mlocGetMessagePartInfo(const void* bound, mlocPart part, mlocMessageP
 // Reads a parameter record.
 static void ReadParameter(const BoundHeader* h, uint32_t p, mlocMessageParameter* out)
 {
+    // Parameters keeps p within the parameters, and the strings and the
+    // variable are read within the view whatever the bytes hold now
+    // (mlocMessageField).
     const MessageView* v = &h->view;
-    // The bind read the message (mlocReadMessage), whose expressions' and
-    // markups' parameters lie within the parameters, and which formatting
-    // reads as checked (mlocMessageFormatter_Bind).
-    MLOC_ASSERT(p < v->count[messageParameters]);
     uint32_t kind = mlocMessageField(v, messageParameters, p, 0);
     out->attribute = kind == parameterAttribute || kind == parameterAttributeLiteral;
     out->variable = kind == parameterOptionVariable;
-    out->name = (const char*)v->pool + mlocMessageField(v, messageParameters, p, 1);
-    out->nameLength = mlocMessageField(v, messageParameters, p, 2);
+    MessageText name = mlocMessageString(v, messageParameters, p, 1);
+    out->name = (const char*)name.text;
+    out->nameLength = name.length;
     out->value = NULL;
     out->valueLength = 0;
-    if (out->variable)
+    if (out->variable || kind != parameterAttribute)
     {
         uint32_t variable = mlocMessageField(v, messageParameters, p, 3);
-        MLOC_ASSERT(variable < v->count[messageVariables]);
-        out->value = (const char*)v->pool + mlocMessageField(v, messageVariables, variable, 0);
-        out->valueLength = mlocMessageField(v, messageVariables, variable, 1);
-    }
-    else if (kind != parameterAttribute)
-    {
-        out->value = (const char*)v->pool + mlocMessageField(v, messageParameters, p, 3);
-        out->valueLength = mlocMessageField(v, messageParameters, p, 4);
+        MessageText value = out->variable ? mlocMessageString(v, messageVariables, variable, 0)
+                                          : mlocMessageString(v, messageParameters, p, 3);
+        out->value = (const char*)value.text;
+        out->valueLength = value.length;
     }
 }
 

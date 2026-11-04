@@ -24,8 +24,8 @@ static bool ReadCall(const mlocMessageCall* call, CallState* out)
 static uint32_t OptionAt(const CallState* s, size_t index)
 {
     const Resolution* r = s->r;
-    uint32_t first = mlocResolutionField(r, messageExpressions, s->expression, 5);
-    uint32_t count = mlocResolutionField(r, messageExpressions, s->expression, 6);
+    uint32_t first = 0;
+    uint32_t count = mlocResolutionParameters(r, messageExpressions, s->expression, 5, &first);
     size_t seen = 0;
     for (uint32_t p = first; p < first + count; p++)
     {
@@ -82,9 +82,9 @@ mlocResult mlocMessageCall_GetOption(const mlocMessageCall* call, size_t index,
     {
         return mloc_errorInvalid;
     }
-    *nameOut =
-        (const char*)mlocResolutionPool(s.r, mlocResolutionField(s.r, messageParameters, p, 1));
-    *lengthOut = mlocResolutionField(s.r, messageParameters, p, 2);
+    MessageText name = mlocResolutionString(s.r, messageParameters, p, 1);
+    *nameOut = (const char*)name.text;
+    *lengthOut = name.length;
     ReadOption(&s, p, valueOut, storageOut);
     return mloc_success;
 }
@@ -104,9 +104,8 @@ mlocResult mlocMessageCall_FindOption(const mlocMessageCall* call, const char* n
         {
             return mloc_errorNotFound;
         }
-        if (mlocResolutionField(s.r, messageParameters, p, 2) == length &&
-            memcmp(mlocResolutionPool(s.r, mlocResolutionField(s.r, messageParameters, p, 1)), name,
-                   length) == 0)
+        MessageText option = mlocResolutionString(s.r, messageParameters, p, 1);
+        if (option.length == length && memcmp(option.text, name, length) == 0)
         {
             ReadOption(&s, p, valueOut, storageOut);
             return mloc_success;

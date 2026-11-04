@@ -90,9 +90,19 @@ static void PassPart(void* context, mlocPart part, size_t start, size_t length)
     }
 }
 
-static const uint8_t* Pool(const Formatting* f, uint32_t offset)
+static MessageText String(const Formatting* f, uint32_t kind, uint32_t index, uint32_t field)
 {
-    return f->r.h.view.pool + offset;
+    return mlocResolutionString(&f->r, kind, index, field);
+}
+
+// A variant's key for a selector, its string within the pool, and
+// whether it is the catch-all.
+static MessageText Key(const Formatting* f, uint32_t variant, uint32_t selector, bool* allOut)
+{
+    uint32_t offset = 0;
+    uint32_t length = 0;
+    *allOut = mlocMessageKey(&f->r.h.view, variant, selector, &offset, &length) == keyCatchAll;
+    return mlocMessageSpan(&f->r.h.view, offset, length);
 }
 
 // A fallback's string in braces: "{$name}", "{|literal|}" with "\" and
@@ -104,8 +114,8 @@ static void PutFallback(Formatting* f, const Value* v)
     if (v->kind == valueFallbackVariable)
     {
         Put(w, "$", 1);
-        Put(w, Pool(f, Field(f, messageVariables, v->variable, 0)),
-            Field(f, messageVariables, v->variable, 1));
+        MessageText name = String(f, messageVariables, v->variable, 0);
+        Put(w, name.text, name.length);
     }
     else if (v->kind == valueFallbackFunction)
     {
@@ -358,12 +368,12 @@ static void PutPattern(Formatting* f, uint32_t first, uint32_t count)
         uint32_t kind = Field(f, messagePieces, i, 0);
         if (kind == pieceText)
         {
-            uint32_t length = Field(f, messagePieces, i, 2);
-            if (length > 0)
+            MessageText text = String(f, messagePieces, i, 1);
+            if (text.length > 0)
             {
-                Report(&f->w, mloc_messagePartText, 0, f->w.length, length);
+                Report(&f->w, mloc_messagePartText, 0, f->w.length, text.length);
             }
-            Put(&f->w, Pool(f, Field(f, messagePieces, i, 1)), length);
+            Put(&f->w, text.text, text.length);
         }
         else if (kind == pieceExpression)
         {
@@ -467,14 +477,13 @@ static bool VariantMatches(Formatting* f, Selector* selectors, uint32_t variant)
     const MessageView* v = &f->r.h.view;
     for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
     {
-        uint32_t offset;
-        uint32_t length;
-        if (mlocMessageKey(v, variant, s, &offset, &length) == keyCatchAll)
+        bool all = false;
+        MessageText key = Key(f, variant, s, &all);
+        if (all)
         {
             continue;
         }
-        if (!KeyMatches(f, &selectors[s], Field(f, messageSelectors, s, 1), Pool(f, offset),
-                        length))
+        if (!KeyMatches(f, &selectors[s], Field(f, messageSelectors, s, 1), key.text, key.length))
         {
             return false;
         }
@@ -491,12 +500,10 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
     const MessageView* v = &f->r.h.view;
     for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
     {
-        uint32_t offset1;
-        uint32_t length1;
-        uint32_t offset2;
-        uint32_t length2;
-        bool all1 = mlocMessageKey(v, variant, s, &offset1, &length1) == keyCatchAll;
-        bool all2 = mlocMessageKey(v, than, s, &offset2, &length2) == keyCatchAll;
+        bool all1 = false;
+        bool all2 = false;
+        MessageText key1 = Key(f, variant, s, &all1);
+        MessageText key2 = Key(f, than, s, &all2);
         if (all1 != all2)
         {
             return all2;
@@ -504,18 +511,18 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
         const Value* value = &selectors[s].value;
         bool numeric = value->kind == valueNumber || value->kind == valueList;
         if (all1 || (value->kind != valueResolved && !numeric) ||
-            (length1 == length2 && memcmp(Pool(f, offset1), Pool(f, offset2), length1) == 0))
+            (key1.length == key2.length && memcmp(key1.text, key2.text, key1.length) == 0))
         {
             continue;
         }
         if (numeric)
         {
             // A number literal beats a plural keyword.
-            if (mlocNumberKeyBetter(Pool(f, offset1), length1, Pool(f, offset2), length2))
+            if (mlocNumberKeyBetter(key1.text, key1.length, key2.text, key2.length))
             {
                 return true;
             }
-            if (mlocNumberKeyBetter(Pool(f, offset2), length2, Pool(f, offset1), length1))
+            if (mlocNumberKeyBetter(key2.text, key2.length, key1.text, key1.length))
             {
                 return false;
             }
@@ -526,13 +533,15 @@ static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32
         {
             continue;
         }
-        const char* key1 = (const char*)Pool(f, offset1);
-        const char* key2 = (const char*)Pool(f, offset2);
-        if (function->better(function->context, &value->resolved, key1, length1, key2, length2))
+        const char* text1 = (const char*)key1.text;
+        const char* text2 = (const char*)key2.text;
+        if (function->better(function->context, &value->resolved, text1, key1.length, text2,
+                             key2.length))
         {
             return true;
         }
-        if (function->better(function->context, &value->resolved, key2, length2, key1, length1))
+        if (function->better(function->context, &value->resolved, text2, key2.length, text1,
+                             key1.length))
         {
             return false;
         }
@@ -652,6 +661,7 @@ static void Run(Formatting* f, uint32_t quiet)
     f->r.quiet = quiet;
     f->r.budget = MLOC_MAX_MESSAGE_RESOLUTIONS;
     f->r.exhausted = false;
+    f->r.depth = 0;
     f->r.optionDepth = 0;
     const MessageView* v = &f->r.h.view;
     // The reported bits of the declarations there are, which binding
@@ -667,7 +677,10 @@ static void Run(Formatting* f, uint32_t quiet)
     // A compiled message always has a variant of catch-all keys.
     if (variant != UINT32_MAX)
     {
-        PutPattern(f, Field(f, messageVariants, variant, 0), Field(f, messageVariants, variant, 1));
+        uint32_t first = 0;
+        uint32_t count =
+            mlocMessageRange(&f->r.h.view, messageVariants, variant, 0, messagePieces, &first);
+        PutPattern(f, first, count);
     }
 }
 
