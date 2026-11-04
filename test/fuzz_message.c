@@ -148,7 +148,7 @@ static const mlocDurationValues s_duration = {0, 0, 0, 1, 0, 30, 0, 0, 0, 0};
 static const mlocListItem s_items[] = {{"Ann", 3}, {"", 0}, {"Cem", 3}};
 
 // An offset zone of five hours west.
-static const mlocTimeZone s_zone = {NULL, 0, 0, -300};
+static const mlocTimeZone s_zone = {.offsetMinutes = -300};
 
 static const mlocMessageArgument s_arguments[] = {
     {"s", 1, {mloc_messageValueString, 0, {.string = {"1", 1}}}},

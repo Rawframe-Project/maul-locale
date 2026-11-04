@@ -135,7 +135,7 @@ zone_name_tables: bytes data_view number_data
 zone_format: bytes data_view date_data date_tables invariant kinds locale_fallback locale_valid names_data number_core number_output number_tables zone_code_tables zone_handle zone_local zone_name_tables zone_rules zone_tables
 zone_codes: data_view invariant zone_code_tables zone_handle zone_tables
 zone_rules: bytes calendar_arith invariant zone_tables
-zone_handle: invariant zone_rules zone_tables
+zone_handle: data_view invariant kinds zone_rules zone_tables
 zone: bytes data_view invariant kinds zone_handle zone_rules
 date_time: calendar_year invariant
 time_arith: date_time duration_round invariant rounding

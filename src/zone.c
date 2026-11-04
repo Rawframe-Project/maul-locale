@@ -72,7 +72,9 @@ mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t leng
     }
     DataSpan span;
     ZoneTables t;
-    if (data == nullptr || !mlocFindDataSetUnit(data, kindZones, nullptr, 0, &span) ||
+    size_t source = 0;
+    uint32_t unit = 0;
+    if (data == nullptr || !mlocFindDataSetUnitAt(data, kindZones, &source, &unit, &span) ||
         !mlocZoneTablesOf(span, &t))
     {
         return mloc_errorNotFound;
@@ -85,7 +87,7 @@ mlocResult mlocFindTimeZone(const mlocDataSet* data, const char* id, size_t leng
     // The zones validator bounds the identifiers to 16 bits.
     MLOC_ASSERT((uint32_t)identifier < t.identifierCount && t.identifierCount <= UINT16_MAX);
     *zoneOut = (mlocTimeZone){
-        .zones = span.bytes, .zonesSize = span.size, .identifier = (uint16_t)identifier};
+        .data = data->sources[source], .unit = unit, .identifier = (uint16_t)identifier};
     return mloc_success;
 }
 
@@ -205,9 +207,11 @@ mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* 
 {
     DataSpan span;
     ZoneTables t;
+    size_t source = 0;
+    uint32_t unit = 0;
     if (data == nullptr || zoneOut == nullptr ||
-        !mlocFindDataSetUnit(data, kindZones, nullptr, 0, &span) || !mlocZoneTablesOf(span, &t) ||
-        index >= t.primaryCount)
+        !mlocFindDataSetUnitAt(data, kindZones, &source, &unit, &span) ||
+        !mlocZoneTablesOf(span, &t) || index >= t.primaryCount)
     {
         return mloc_errorInvalid;
     }
@@ -215,7 +219,7 @@ mlocResult mlocGetTimeZone(const mlocDataSet* data, size_t index, mlocTimeZone* 
     // The zones validator checked each primary names an identifier.
     MLOC_ASSERT(identifier < t.identifierCount);
     *zoneOut =
-        (mlocTimeZone){.zones = span.bytes, .zonesSize = span.size, .identifier = identifier};
+        (mlocTimeZone){.data = data->sources[source], .unit = unit, .identifier = identifier};
     return mloc_success;
 }
 

@@ -24,7 +24,7 @@ if (mlocMakeDate(mloc_calendarGregorian, &input, mloc_overflowReject, &date) == 
 
 ## Time zones and instants
 
-An `mlocInstant` is a point in time, seconds and nanoseconds since 1970 in universal time. An `mlocTimeZone` is found by its IANA identifier in any letter case ("America/New_York"), by a fixed offset ("+05:30"), by its BCP 47 id (`mlocFindTimeZoneBcp47`, "usnyc") or by its Windows name (`mlocFindTimeZoneWindows`). Its rules come from the IANA release compiled into the data; a [zones file](data.md#a-newer-time-zone-release) brings a newer one.
+An `mlocInstant` is a point in time, seconds and nanoseconds since 1970 in universal time. An `mlocTimeZone` is found by its IANA identifier in any letter case ("America/New_York"), by a fixed offset ("+05:30"), by its BCP 47 id (`mlocFindTimeZoneBcp47`, "usnyc") or by its Windows name (`mlocFindTimeZoneWindows`). Its rules come from the IANA release compiled into the data; a [zones file](data.md#a-newer-time-zone-release) brings a newer one. A zone keeps a copy of the source it was found in, not a pointer to the set, so the set may go once the zone is found; the source's bytes outlive the zone and stay as they were. A zone may be copied and assigned like any value; its fields are the library's, and each call checks them against that source.
 
 `mlocGetDateTimeFor` gives the local date-time of a zone at an instant. The other way, a local date-time can name no instant (a gap when clocks move forward) or two (a fold when they move back); `mlocGetInstantFor` chooses as the disambiguation says, and `mlocGetPossibleInstants` lists them.
 

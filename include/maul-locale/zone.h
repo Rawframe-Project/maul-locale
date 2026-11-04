@@ -40,12 +40,19 @@ extern "C"
 
     // A time zone, made by mlocFindTimeZone or mlocGetTimeZone and read
     // through the functions here; its fields are the library's. A named
-    // zone points into its data, which must outlive it and not change.
+    // zone holds a copy of the opened data it was found in, whose bytes
+    // must outlive it and not change, and its zones unit's place there.
+    // Every call reads the unit through that data and checks the unit and
+    // the identifier first, so a zone copied, assigned or put together
+    // from other zones' fields reads only units the data's open
+    // validated. An mlocData that mlocOpenData or mlocOpenBuiltinData did
+    // not fill is forged, and a zone holding one is outside the contract.
     typedef struct mlocTimeZone
     {
-        // The zones unit, or null for an offset zone.
-        const void* zones;
-        uint32_t zonesSize;
+        // The data the zones unit is in; all zero for an offset zone.
+        mlocData data;
+        // The zones unit's place in the data's unit table.
+        uint32_t unit;
         // The identifier's place in the unit.
         uint16_t identifier;
         // An offset zone's offset in minutes, -1439 to 1439.

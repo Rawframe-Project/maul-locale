@@ -343,8 +343,8 @@ bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uin
 }
 
 // The search of a unit table, taking the view's two fields by value so
-// that the set's loop keeps them in registers; on a miss, where the key
-// would be.
+// that the set's loop keeps them in registers; where the key is, or on a
+// miss where it would be.
 static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t kind,
                               uint32_t locale, DataSpan* spanOut, uint32_t* atOut)
 {
@@ -363,6 +363,7 @@ static inline bool FindUnitAt(const uint8_t* bytes, uint32_t unitCount, uint32_t
                         mlocLoad32(entry + 8) >=
                             dataHeaderSize + (uint64_t)unitCount * dataUnitSize);
             *spanOut = (DataSpan){bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+            *atOut = middle;
             return true;
         }
         if (middleKey < key)
@@ -457,6 +458,33 @@ static bool FindLocaleUnit(const mlocDataSet* set, uint32_t kind, const char* id
         if (mlocFindDataLocale(&view, id, length, &locale) &&
             FindUnit(view.bytes, view.unitCount, kind, locale, spanOut))
         {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool mlocDataUnitAt(const DataView* view, uint32_t index, uint32_t* kindOut, DataSpan* spanOut)
+{
+    if (index >= view->unitCount)
+    {
+        return false;
+    }
+    const uint8_t* entry = view->bytes + dataHeaderSize + (size_t)index * dataUnitSize;
+    *kindOut = mlocLoad32(entry);
+    *spanOut = (DataSpan){view->bytes + mlocLoad32(entry + 8), mlocLoad32(entry + 12)};
+    return true;
+}
+
+bool mlocFindDataSetUnitAt(const mlocDataSet* set, uint32_t kind, size_t* sourceOut,
+                           uint32_t* indexOut, DataSpan* spanOut)
+{
+    for (size_t i = 0; i < set->count; i++)
+    {
+        DataView view = mlocViewOf(&set->sources[i]);
+        if (FindUnitAt(view.bytes, view.unitCount, kind, dataNoLocale, spanOut, indexOut))
+        {
+            *sourceOut = i;
             return true;
         }
     }
