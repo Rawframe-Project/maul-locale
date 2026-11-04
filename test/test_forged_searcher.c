@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Sirac Ozmen
 //
-// A searcher whose stamp is right but whose stored counts are not
-// (the library checks every index it stores): a ring of no
-// elements or more than it holds, a pattern of no elements or more than
-// it holds, an NFD longer than it holds, and a collator inside it that is
-// not one, are refused by every find, which then reads none of them; a
-// searcher the library made is found in, before and after.
+// A searcher whose stamp is right but whose stored counts are not (the
+// library checks every index it stores): a ring of no elements or more
+// than it holds, a pattern of no elements or more than it holds, an NFD
+// longer than it holds, a comparison that is none, and a collator inside
+// it that is not one or whose bool or kind bytes are forged, are refused
+// by every find, which then reads none of them; a searcher the library
+// made is found in, before and after.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -81,6 +82,8 @@ static void TestCounts(void)
     CHECK(AllGive(mloc_errorInvalid), "an NFD past its room is refused");
     Fresh()->nfdCount = searchMaxElements;
     CHECK(AllGive(mloc_success), "an NFD at its room is not read below the identical strength");
+    Fresh()->comparison = mloc_searchAnyBaseWildcard + 1;
+    CHECK(AllGive(mloc_errorInvalid), "a comparison the header does not name is refused");
     Fresh()->collator.stamp = 0;
     CHECK(AllGive(mloc_errorInvalid), "a collator that is not one is refused");
 }

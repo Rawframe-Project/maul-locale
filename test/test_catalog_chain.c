@@ -516,6 +516,19 @@ static void TestForged(Set* s)
               mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, &output, nullptr, nullptr) ==
                   mloc_errorInvalid,
           "a bound slot past the bytes used");
+    // A slot's reason and position, which reach the result.
+    forged = slot;
+    forged.reason = mloc_catalogCacheFull + 1;
+    memcpy(cache + cacheHead, &forged, sizeof(forged));
+    CHECK(mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, &output, nullptr, nullptr) ==
+              mloc_errorInvalid,
+          "a slot whose reason is none");
+    forged = slot;
+    forged.position = chainCount + 1;
+    memcpy(cache + cacheHead, &forged, sizeof(forged));
+    CHECK(mlocCatalogChain_FormatMessage(&chain, 0, nullptr, 0, &output, nullptr, nullptr) ==
+              mloc_errorInvalid,
+          "a slot whose position passes the catalogs");
     forged = slot;
     forged.state = slotKey + 1;
     memcpy(cache + cacheHead, &forged, sizeof(forged));

@@ -201,15 +201,39 @@ static bool QueueInText(const Segmenter* s)
            s->queueBase - s->pieceStart <= s->pieceLength;
 }
 
+// Whether a segmenter's bool and enumeration bytes hold what one stores:
+// each bool's byte 0 or 1, read before the bool is, the filters a set
+// made, and the class and the terminator run within their ranges.
+static bool KnownBytes(const Segmenter* s)
+{
+    static const size_t flags[] = {
+        offsetof(Segmenter, started),     offsetof(Segmenter, iteratorWaits),
+        offsetof(Segmenter, moreFollows), offsetof(Segmenter, iteratorDone),
+        offsetof(Segmenter, busy),        offsetof(Segmenter, heldSuppressed),
+        offsetof(Segmenter, heldValid),
+    };
+    for (size_t i = 0; i < sizeof(flags) / sizeof(flags[0]); i++)
+    {
+        if (!mlocFlagAt(s, flags[i]))
+        {
+            return false;
+        }
+    }
+    return (s->filters == 0 || s->filters == segmentSuppress || s->filters == segmentJapanese) &&
+           s->cursorClass <= japaneseIdeographic && s->scanRun <= 2;
+}
+
 // A segmenter the library made; null for any other, and for one whose
-// counts pass the arrays and table they index, or whose queue starts past
-// the text fed, which the filters read before anything else.
+// counts pass the arrays and table they index, whose queue starts past
+// the text fed, which the filters read before anything else, or whose
+// bool or enumeration bytes hold what none stores.
 static Segmenter* Made(mlocSegmenter* segmenter)
 {
     Segmenter* s = (Segmenter*)segmenter;
     return s != nullptr && s->stamp == segmenterStamp && s->kind <= mloc_segmentLine &&
                    s->queueCount < segmentQueue && s->windowLength <= segmentWindow &&
-                   s->windowLength <= s->pieceStart && KnownOverrides(s) && QueueInText(s)
+                   s->windowLength <= s->pieceStart && KnownOverrides(s) && QueueInText(s) &&
+                   KnownBytes(s)
                ? s
                : nullptr;
 }
