@@ -43,7 +43,8 @@ may change the API, the ABI and every data format.
   call that takes a set refuses one with such a source with
   `mloc_errorInvalid`, or a count of 0 where it returns a count, and
   never skips it; a named zone holding such data is refused the same
-  way. A source's bytes are those its open was given
+  way. A source's bytes are those its open was given; a source whose
+  bytes pointer was changed afterwards is outside the contract
   ([#465](https://github.com/Rawframe-Project/maul-locale/pull/465)).
 
 ## [0.11.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.10.0...v0.11.0) (2026-11-03)
