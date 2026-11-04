@@ -5,6 +5,48 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.11.0...v0.12.0) (2026-11-04)
+
+### Changed
+
+- **Breaking: a named time zone holds its data, not a pointer into it.**
+  `mlocTimeZone` held a raw pointer and size to its zones unit
+  (`zones`, `zonesSize`), so a zone pointed at bytes no open validated,
+  such as a copy of the unit, was read unchecked and could read past
+  them. A zone now holds a copy of the opened `mlocData` it was found
+  in, the place of its zones unit there, its identifier and an offset
+  zone's minutes: `{data, unit, identifier, offsetMinutes}`, 40 bytes in
+  place of 24. Every call checks the unit and the identifier against
+  that data, so a zone copied, assigned or put together from other
+  zones' fields reads only units the data's open validated. A program
+  that stored a zone, or read `zones` and `zonesSize`, finds the zone
+  again with `mlocFindTimeZone` or `mlocGetTimeZone`; one that builds an
+  offset zone by hand sets `offsetMinutes` alone
+  ([#461](https://github.com/Rawframe-Project/maul-locale/pull/461)).
+
+### Fixed
+
+- A bound message whose compiled message was changed after the bind
+  could be read past its bytes in a release build, and stopped at an
+  assertion in a build with assertions on. The caller still keeps the
+  message as it was, but formatting and the part accessors now read
+  every record, string and run within the compiled message whatever it
+  holds, and a chain of declarations made to loop ends as running out
+  of resolutions does
+  ([#460](https://github.com/Rawframe-Project/maul-locale/pull/460)).
+- A data source no open filled, such as an `mlocData` left
+  uninitialized or cleared, was read through whatever its words held
+  when it was put in a set: a call could read through a wild pointer, or
+  take a cleared source as one with no data. Only `mlocOpenData` and
+  `mlocOpenBuiltinData` fill a source now, with a mark the library
+  checks, together with the source's sizes, before reading it. Every
+  call that takes a set refuses one with such a source with
+  `mloc_errorInvalid`, or a count of 0 where it returns a count, and
+  never skips it; a named zone holding such data is refused the same
+  way. A source's bytes are those its open was given; a source whose
+  bytes pointer was changed afterwards is outside the contract
+  ([#465](https://github.com/Rawframe-Project/maul-locale/pull/465)).
+
 ## [0.11.0](https://github.com/Rawframe-Project/maul-locale/compare/v0.10.0...v0.11.0) (2026-11-03)
 
 ### Changed
