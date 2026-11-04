@@ -18,6 +18,7 @@
 #include "maul-locale/data.h"
 #include "maul-locale/search.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -92,6 +93,20 @@ static void TestCollatorRanges(void)
     CHECK(AllGive(mloc_errorInvalid), "its collator's reordering past its ranges is refused");
 }
 
+// Its collator's bool and kind bytes, which every find reads: a settings
+// bool byte of 2, which is undefined to read as a bool, and a strength the
+// library has not, are refused.
+static void TestCollatorBytes(void)
+{
+    CHECK(Make("en") && (Fresh(), AllGive(mloc_success)), "an English searcher finds");
+    ((uint8_t*)Fresh())[offsetof(Searcher, collator.settings.shifted)] = 2;
+    CHECK(AllGive(mloc_errorInvalid), "its collator's settings bool byte of 2 is refused");
+    Fresh()->collator.settings.strength = collationIdentical + 1;
+    CHECK(AllGive(mloc_errorInvalid), "its collator's strength past the levels is refused");
+    Fresh();
+    CHECK(AllGive(mloc_success), "put back, it finds again");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -109,5 +124,6 @@ int main(void)
     }
     TestCounts();
     TestCollatorRanges();
+    TestCollatorBytes();
     return s_failures == 0 ? 0 : 1;
 }

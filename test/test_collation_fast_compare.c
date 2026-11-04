@@ -9,7 +9,8 @@
 // table holds itself, as the general compare does, unless the settings
 // make it bail out; a precomposed letter whose marks a contraction reads
 // past bails out on the mark. A collator whose stored reordering claims
-// more ranges than it holds is refused by every call that reads one.
+// more ranges than it holds is refused by every call that reads one, and
+// so is one whose bool or kind bytes are none the library writes.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -574,6 +575,101 @@ static void TestForgedRanges(void)
           "a collator without a reordering does not read its count");
 }
 
+// What each call gives a collator: compares of texts that begin alike
+// (which read the settings, and the fast Latin options where they serve),
+// keys (the settings), a searcher and an index (the whole value).
+typedef struct Calls
+{
+    mlocResult compare;
+    mlocResult compareUtf16;
+    mlocResult key;
+    mlocResult keyUtf16;
+    mlocResult searcher;
+    mlocResult index;
+} Calls;
+
+static Calls Call(const mlocCollator* c)
+{
+    static const uint16_t ab[] = {'a', 'b'};
+    static const uint16_t ac[] = {'a', 'c'};
+    static uint8_t key[256];
+    static mlocSearcher searcher;
+    static uint8_t index[1 << 16];
+    int order = 0;
+    size_t length = 0;
+    mlocLocale locale;
+    (void)mlocParseLocale("en", 2, &locale);
+    return (Calls){
+        mlocCollator_Compare(c, "ab", 2, "ac", 2, &order),
+        mlocCollator_CompareUtf16(c, ab, 2, ac, 2, &order),
+        mlocCollator_GetSortKey(c, "a", 1, key, sizeof(key), &length),
+        mlocCollator_GetSortKeyUtf16(c, ab, 1, key, sizeof(key), &length),
+        mlocInitSearcher(c, "a", 1, nullptr, &searcher),
+        mlocBuildIndex(c, &s_data, &locale, nullptr, index, sizeof(index), &length),
+    };
+}
+
+static bool Refused(Calls r)
+{
+    return r.compare == mloc_errorInvalid && r.compareUtf16 == mloc_errorInvalid &&
+           r.key == mloc_errorInvalid && r.keyUtf16 == mloc_errorInvalid &&
+           r.searcher == mloc_errorInvalid && r.index == mloc_errorInvalid;
+}
+
+// A collator whose bool bytes hold neither 0 nor 1, which is undefined to
+// read as a bool, or whose strength or case order is none the library
+// has: refused by each call that reads it. The fast Latin options are
+// read by compares and by a searcher or index made from the collator,
+// not by keys.
+static void TestForgedBytes(void)
+{
+    mlocLocale locale;
+    static mlocCollator made;
+    static mlocCollator c;
+    const Collator* fresh = (const Collator*)&made;
+    bool ok = mlocParseLocale("en", 2, &locale).status == mloc_success &&
+              mlocInitCollator(&s_data, &locale, nullptr, &made) == mloc_success &&
+              fresh->fastLatin == 1;
+    c = made;
+    CHECK(ok && AllGive(&c, mloc_success), "an English collator, served by the fast Latin compare");
+    const size_t settings[] = {
+        offsetof(Collator, settings.shifted),
+        offsetof(Collator, settings.backwards),
+        offsetof(Collator, settings.caseLevel),
+        offsetof(Collator, settings.numeric),
+    };
+    for (size_t i = 0; i < sizeof(settings) / sizeof(settings[0]); i++)
+    {
+        c = made;
+        ((uint8_t*)&c)[settings[i]] = 2;
+        CHECK(ok && Refused(Call(&c)), "a settings bool byte of 2 is refused by every call");
+    }
+    Collator* stored = (Collator*)&c;
+    c = made;
+    stored->settings.strength = collationIdentical + 1;
+    CHECK(ok && Refused(Call(&c)), "a strength the library has not is refused");
+    c = made;
+    stored->settings.caseFirst = collationUpperFirst + 1;
+    CHECK(ok && Refused(Call(&c)), "a case order the library has not is refused");
+    const size_t fast[] = {
+        offsetof(Collator, fast.backwards),          offsetof(Collator, fast.caseLevel),
+        offsetof(Collator, fast.upperFirst),         offsetof(Collator, fast.tertiaryCase),
+        offsetof(Collator, fast.tertiaryUpperFirst), offsetof(Collator, fast.digitsBail),
+    };
+    for (size_t i = 0; i < sizeof(fast) / sizeof(fast[0]); i++)
+    {
+        c = made;
+        ((uint8_t*)&c)[fast[i]] = 2;
+        Calls r = Call(&c);
+        CHECK(ok && r.compare == mloc_errorInvalid && r.compareUtf16 == mloc_errorInvalid &&
+                  r.key == mloc_success && r.keyUtf16 == mloc_success &&
+                  r.searcher == mloc_errorInvalid && r.index == mloc_errorInvalid,
+              "a fast Latin bool byte of 2 is refused by the calls that read it");
+    }
+    c = made;
+    CHECK(ok && AllGive(&c, mloc_success), "put back, the collator is read again");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -604,5 +700,6 @@ int main(void)
     TestTailoredAnswers();
     TestReorderings();
     TestForgedRanges();
+    TestForgedBytes();
     return s_failures == 0 ? 0 : 1;
 }

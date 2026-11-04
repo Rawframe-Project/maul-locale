@@ -98,18 +98,59 @@ static inline bool mlocReadCollatorHead(const void* value, Collator* c)
     return ranges <= collationMaxReorderRanges;
 }
 
-// The fast Latin compare's options, after the head.
-static inline void mlocReadCollatorFast(const void* value, Collator* c)
+static_assert(offsetof(FastLatinOptions, digitsBail) - offsetof(FastLatinOptions, backwards) == 5,
+              "the fast Latin options' six bools are side by side");
+
+// Whether a collator value's fast Latin options hold a bool's byte in
+// each bool, checked before they are read as bools: the six side by side,
+// read at once, each 0 or 1. A fast compare reads them on every call.
+static inline bool mlocCollatorFastSound(const void* value)
 {
+    uint64_t flags = 0;
+    memcpy(&flags, (const uint8_t*)value + offsetof(Collator, fast.backwards), 6);
+    // The two bytes past them stay 0, so the mask holds in either byte
+    // order.
+    return (flags & 0xFEFEFEFEFEFEFEFEull) == 0;
+}
+
+// Whether a collator value's settings hold a bool's byte in each bool and
+// a strength and case order the library has, checked before they are read.
+static inline bool mlocCollatorSettingsSound(const void* value)
+{
+    const uint8_t* b = value;
+    unsigned flags =
+        b[offsetof(Collator, settings.shifted)] | b[offsetof(Collator, settings.backwards)] |
+        b[offsetof(Collator, settings.caseLevel)] | b[offsetof(Collator, settings.numeric)];
+    uint32_t strength = 0;
+    uint32_t caseFirst = 0;
+    memcpy(&strength, b + offsetof(Collator, settings.strength), sizeof(strength));
+    memcpy(&caseFirst, b + offsetof(Collator, settings.caseFirst), sizeof(caseFirst));
+    return flags <= 1 && strength <= collationIdentical && caseFirst <= collationUpperFirst;
+}
+
+// The fast Latin compare's options, after the head; false for options
+// whose bools are not bools.
+static inline bool mlocReadCollatorFast(const void* value, Collator* c)
+{
+    if (!mlocCollatorFastSound(value))
+    {
+        return false;
+    }
     memcpy(&c->fast, (const uint8_t*)value + offsetof(Collator, fast), sizeof(c->fast));
+    return true;
 }
 
 // The general path's parts, after the head: the root and the settings, and
 // the tailoring, Han table and reordering only where the head says they
 // are in use (the reordering alone is 520 bytes), the settings pointed at
-// them: copying the whole value was most of a fast compare's time.
-static inline void mlocReadCollatorRest(const void* value, Collator* c)
+// them: copying the whole value was most of a fast compare's time. False
+// for settings whose bools or kinds are none the library writes.
+static inline bool mlocReadCollatorRest(const void* value, Collator* c)
 {
+    if (!mlocCollatorSettingsSound(value))
+    {
+        return false;
+    }
     const uint8_t* b = value;
     memcpy(&c->root, b + offsetof(Collator, root), sizeof(c->root));
     memcpy(&c->settings, b + offsetof(Collator, settings), sizeof(c->settings));
@@ -126,6 +167,7 @@ static inline void mlocReadCollatorRest(const void* value, Collator* c)
         memcpy(&c->reorder, b + offsetof(Collator, reorder), sizeof(c->reorder));
     }
     mlocPointCollator(c);
+    return true;
 }
 
 // A collator the library made, copied out whole with its settings
@@ -134,7 +176,8 @@ static inline void mlocReadCollatorRest(const void* value, Collator* c)
 // reads the parts above instead.
 static inline bool mlocReadCollator(const void* value, Collator* c)
 {
-    if (!mlocReadCollatorHead(value, c))
+    if (!mlocReadCollatorHead(value, c) || !mlocCollatorFastSound(value) ||
+        !mlocCollatorSettingsSound(value))
     {
         return false;
     }

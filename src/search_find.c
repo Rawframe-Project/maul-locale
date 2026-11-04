@@ -176,13 +176,13 @@ mlocResult mlocSearchOpenFind(Find* f, const mlocSearcher* searcher, NfdText tex
     // read as any collator is.
     const Searcher* s = (const Searcher*)searcher;
     if (s->count < 1 || s->count > searchMaxElements || s->ring < 1 || s->ring > searchRing ||
-        s->nfdCount > searchMaxElements || !mlocReadCollatorHead(&s->collator, &f->collator))
+        s->nfdCount > searchMaxElements || !mlocReadCollatorHead(&s->collator, &f->collator) ||
+        !mlocReadCollatorRest(&s->collator, &f->collator))
     {
         return mloc_errorInvalid;
     }
     f->s = s;
     f->text = text;
-    mlocReadCollatorRest(&s->collator, &f->collator);
     f->ring.size = s->ring;
     f->ring.first = 0;
     f->ring.limit = 0;
