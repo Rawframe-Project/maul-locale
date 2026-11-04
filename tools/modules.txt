@@ -106,8 +106,8 @@ relative_tables: bytes data_view number_data
 segment_overrides:
 segment_tables: bytes data_view number_data segment_overrides
 segmenter: data_view segment_tables
-segment: bytes data_view invariant kinds locale_fallback locale_keyword locale_valid segment_overrides segmenter
-segment_filter: bytes invariant segmenter
+segment: bytes data_view kinds locale_fallback locale_keyword locale_valid segment_overrides segmenter
+segment_filter: bytes segmenter
 catalog_hash: bytes
 catalog_tables: asset bytes catalog_hash data_view invariant message_read
 catalog_view: catalog_tables

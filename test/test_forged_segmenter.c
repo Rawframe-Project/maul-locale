@@ -5,8 +5,11 @@
 // (the library checks every index it stores): a queue or window
 // past its room, a window longer than the text before the piece, a kind
 // that is none, and overrides that are not a set of the code table whole,
-// are refused by every call, which then reads none of them; a segmenter
-// the library made breaks, before and after.
+// are refused by every call, which then reads none of them; so are a
+// queue that starts past the text fed or fills the queue, a piece start
+// moved past the text a Japanese filter reads, and a break left waiting
+// after the iterator ended, each of which reached an assertion; a
+// segmenter the library made breaks, before and after.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -169,6 +172,60 @@ static void TestOverrideSets(void)
           "a segmenter with a set of overrides breaks");
 }
 
+// Forged state that passed the counts' bounds but reached an assertion:
+// the queue full with its first break waiting past the text, so that the
+// next break pulled is queued past it; one break queued past the text, so
+// that the next one's distance wraps; a Japanese word segmenter's piece
+// start moved past the text its cursor reads; and a break waiting after
+// the iterator ended.
+static void TestReachedAssertions(void)
+{
+    static mlocSegmenter made;
+    static mlocSegmenter forged;
+    const char* text = "He met Mr. Smith. Then he left.";
+    size_t end = strlen(text);
+    size_t offset = 0;
+    bool mandatory = false;
+    bool ok = Make("en-u-ss-standard", mloc_segmentSentence, text, true, &made);
+    forged = made;
+    Segmenter* s = (Segmenter*)&forged;
+    s->queueCount = segmentQueue;
+    s->queueBase = end + 10;
+    CHECK(ok && mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a full queue waiting past the text is refused");
+    forged = made;
+    s->queueCount = 1;
+    s->queue[0] = 0;
+    s->queueBase = end + 10;
+    CHECK(ok && mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a queue starting past the text is refused");
+    // A Japanese word filter waits at the end of a piece more text
+    // follows: its break, queued, waits after the iterator is said to end.
+    static mlocSegmenter waiting;
+    const char* piece = "\xE6\x97\xA5\xE6\x9C\xAC";
+    bool made2 = Make("ja", mloc_segmentWord, piece, true, &waiting);
+    forged = waiting;
+    s->queueCount = 1;
+    s->queue[0] = 0;
+    s->queueBase = strlen(piece);
+    s->iteratorDone = true;
+    CHECK(made2 && mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a break waiting after the iterator ended is refused");
+    static mlocSegmenter japanese;
+    const char* words = "\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E\xE3\x81\xAE\xE6\x96\x87";
+    ok = Make("ja", mloc_segmentWord, words, false, &japanese);
+    const Segmenter* filtered = (const Segmenter*)&japanese;
+    CHECK(ok && filtered->filters != 0, "a Japanese word segmenter filters");
+    forged = japanese;
+    s->pieceStart = 100;
+    s->windowLength = 0;
+    CHECK(ok && mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a piece start past the text the cursor reads is refused");
+    forged = made;
+    CHECK(mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_success,
+          "the segmenter as made still breaks");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_SEGMENTS_FILE, "rb");
@@ -188,5 +245,6 @@ int main(void)
     TestFeed();
     TestComplexBreaker();
     TestOverrideSets();
+    TestReachedAssertions();
     return s_failures == 0 ? 0 : 1;
 }
