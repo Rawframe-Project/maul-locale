@@ -276,14 +276,15 @@ static mlocResult Status(muniResult r)
 
 // Queues a break for the filters. The breaks waiting are within the
 // bytes a filter may wait on, so their distances from the first fit; false
-// for a segmenter whose queue was changed so that they do not.
+// for a segmenter whose queue was changed so that they do not. A break
+// before the first wraps its distance past UINT8_MAX too.
 static bool Push(Segmenter* s, size_t offset)
 {
     if (s->queueCount == 0)
     {
         s->queueBase = offset;
     }
-    if (s->queueCount >= segmentQueue || offset < s->queueBase || offset - s->queueBase > UINT8_MAX)
+    if (s->queueCount >= segmentQueue || offset - s->queueBase > UINT8_MAX)
     {
         return false;
     }

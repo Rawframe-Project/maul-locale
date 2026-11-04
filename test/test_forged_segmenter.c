@@ -8,7 +8,8 @@
 // are refused by every call, which then reads none of them; so are a
 // queue that starts past the text fed or fills the queue, a piece start
 // moved past the text a Japanese filter reads, and a break left waiting
-// after the iterator ended, each of which reached an assertion; a
+// after the iterator ended, each of which reached an assertion, and a
+// queue filled or a break queued too far behind a waiting one; a
 // segmenter the library made breaks, before and after.
 
 #ifdef _WIN32
@@ -226,6 +227,45 @@ static void TestReachedAssertions(void)
           "the segmenter as made still breaks");
 }
 
+// A Japanese word segmenter, more text to follow, whose first queued break
+// waits: the piece start moved past it, the cursor at it, so its text is
+// not at hand. Each next break pulled is then queued behind it.
+static bool Waiting(const char* text, uint8_t queued, mlocSegmenter* out)
+{
+    if (!Make("ja", mloc_segmentWord, text, true, out))
+    {
+        return false;
+    }
+    Segmenter* s = (Segmenter*)out;
+    s->queueCount = queued;
+    memset(s->queue, 0, sizeof(s->queue));
+    s->queueBase = 0;
+    s->cursor = 0;
+    s->pieceStart = 50;
+    s->windowLength = 0;
+    return true;
+}
+
+// Forged queues that reach the queueing itself: one break short of a full
+// queue, which two breaks pulled behind the waiting one would pass, and a
+// break pulled further from the waiting one than a queue's distance holds.
+static void TestQueueing(void)
+{
+    static mlocSegmenter forged;
+    static char text[320];
+    size_t offset = 0;
+    bool mandatory = false;
+    const char* words = "\xE6\x97\xA5\xE6\x9C\xAC \xE8\xAA\x9E \xE3\x81\xAE \xE6\x96\x87";
+    CHECK(Waiting(words, segmentQueue - 1, &forged) &&
+              mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a queue one short of full, filled by breaks pulled behind its first, is refused");
+    memset(text, 'a', 300);
+    memcpy(text + 300, " b c", 5);
+    CHECK(Waiting(text, 1, &forged) &&
+              mlocSegmenter_NextBreak(&forged, &offset, &mandatory) == mloc_errorInvalid,
+          "a break pulled past a queue's distance from its first is refused");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_SEGMENTS_FILE, "rb");
@@ -246,5 +286,6 @@ int main(void)
     TestComplexBreaker();
     TestOverrideSets();
     TestReachedAssertions();
+    TestQueueing();
     return s_failures == 0 ? 0 : 1;
 }
