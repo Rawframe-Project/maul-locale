@@ -428,6 +428,23 @@ static bool UsedRange(const char* id, const char* unit, const char* usage, const
            Same(buffer, &output, expected);
 }
 
+// A usage formatter's result for an amount, its text aside.
+static mlocResult UsedResult(const char* id, const char* unit, const char* usage,
+                             const char* amount)
+{
+    mlocUnitOptions options = {.usage = usage, .usageLength = strlen(usage)};
+    mlocUnitFormatter formatter;
+    mlocDecimal decimal;
+    char buffer[1024];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    if (Init(&formatter, id, unit, &options) < 0 ||
+        mlocParseDecimal(amount, strlen(amount), &decimal).status != mloc_success)
+    {
+        return (mlocResult)-100;
+    }
+    return mlocUnitFormatter_Format(&formatter, &decimal, &output);
+}
+
 static void TestUsage(void)
 {
     CHECK(Used("en-US", "meter", "road", mloc_unitWidthShort, "0.3", "1 ft") &&
@@ -533,6 +550,17 @@ static void TestUsage(void)
                "A\xE2\x8B\x85K\xE2\x8B\x85item\xE2\x8B\x85"
                "bit"),
           "an input of the most single units");
+    // Converted exactly, a tiny Celsius amount plus Fahrenheit's offset and
+    // a tiny mass split into pounds and ounces pass the decimal's digits,
+    // and so does a huge length in feet and inches. ICU4C, in doubles,
+    // gives 32 degrees Fahrenheit and 0 for the first two.
+    CHECK(Used("en-US", "celsius", "weather", mloc_unitWidthShort, "1e-30",
+               "32\xC2\xB0"
+               "F") &&
+              UsedResult("en-US", "celsius", "weather", "1e-600") == mloc_errorLimit &&
+              UsedResult("en-GB", "kilogram", "person", "1e-600") == mloc_errorLimit &&
+              UsedResult("en-US", "meter", "person-height", "1e1000") == mloc_errorLimit,
+          "a converted amount past the decimal's digits is refused");
 }
 
 static void TestNumeric(void)
