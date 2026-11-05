@@ -132,6 +132,14 @@ static void TestCompounds(void)
           "a quotient from the denominator's per pattern");
     CHECK(Long("en", "per-second-meter", "2", "2 per meter-second"),
           "per takes the rest, normalized");
+    // ICU4C 79.1's answers.
+    CHECK(Width("en", "kibibyte", mloc_unitWidthShort, "3", "3 Kibyte") &&
+              Long("en", "kibibyte", "3", "3 kibibytes") &&
+              Width("en", "kibibyte", mloc_unitWidthNarrow, "5", "5KiB") &&
+              Width("en", "mebibyte-per-second", mloc_unitWidthShort, "2", "2 Mibyte/s") &&
+              Long("de", "gibibyte", "1", "1 Gibibyte") &&
+              Width("fr", "mebibyte", mloc_unitWidthShort, "4", "4\xE2\x80\xAFMio"),
+          "binary prefixes, by their names' 1024 keys");
     CHECK(Width("en", "meter-per-square-second", mloc_unitWidthShort, "3", "3 m/s\xC2\xB2") &&
               Long("en", "kilogram-meter-per-square-second", "2",
                    "2 kilogram-meters per square second"),
