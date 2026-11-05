@@ -5,7 +5,7 @@
 // read through the iterator as CLDR 49's root gives them, and a copy with
 // a unit spoiled refused at open: the checks a collator's making trusts
 // (each trie offset, the fast Latin table, the unsafe ranges, a stored
-// reordering) run there. Every stored reordering is the one the root
+// reordering, an element's case bits) run there. Every stored reordering is the one the root
 // makes of the tailoring's codes, which no validator can see.
 
 #ifdef _WIN32
@@ -144,6 +144,47 @@ static void SpoilViews(DataSpan unit, uint32_t hashAt, const CollationRoot* r, c
     {
         snprintf(message, sizeof(message), "%s: an unsafe range past U+10FFFF", what);
         Spoil(unit, hashAt, r->unsafe + 4, beyond, 4, message);
+    }
+}
+
+// The case bits of an element: a long secondary's tertiary and an
+// expansion's element given the fourth case, which ICU never writes and
+// the case level would write as a nibble past a byte.
+static void SpoilCases(DataSpan unit, uint32_t hashAt, const CollationRoot* r, const char* what)
+{
+    const uint8_t* secondary = nullptr;
+    const uint8_t* expansion = nullptr;
+    for (uint32_t i = 0; i < r->trie.dataLength; i++)
+    {
+        const uint8_t* word = r->trie.data + (size_t)i * 4;
+        uint32_t ce32 = mlocLoad32(word);
+        if (!mlocCe32IsSpecial(ce32) || ce32 == collationImplicitCe32)
+        {
+            continue;
+        }
+        if (secondary == nullptr && mlocCe32Tag(ce32) == collationTagLongSecondary)
+        {
+            secondary = word;
+        }
+        if (expansion == nullptr && mlocCe32Tag(ce32) == collationTagExpansion)
+        {
+            expansion = r->ces + (size_t)mlocCe32Index(ce32) * 8;
+        }
+    }
+    char message[96];
+    CHECK(secondary != nullptr && expansion != nullptr, what);
+    if (secondary != nullptr)
+    {
+        // Bits 15..8 of the word: the tertiary byte, case bits on top.
+        uint8_t cased[1] = {(uint8_t)(secondary[1] | 0xC0)};
+        snprintf(message, sizeof(message), "%s: a long secondary of the fourth case", what);
+        Spoil(unit, hashAt, secondary + 1, cased, 1, message);
+    }
+    if (expansion != nullptr)
+    {
+        uint8_t cased[1] = {(uint8_t)(expansion[1] | 0xC0)};
+        snprintf(message, sizeof(message), "%s: an expansion's element of the fourth case", what);
+        Spoil(unit, hashAt, expansion + 1, cased, 1, message);
     }
 }
 
@@ -306,6 +347,7 @@ int main(void)
         mlocReadCollationRoot(span, &r))
     {
         SpoilViews(span, collationRootHashAt, &r, "the root");
+        SpoilCases(span, collationRootHashAt, &r, "the root");
     }
     DataSpan types = {0};
     CollationTailoring tailoring;
