@@ -499,13 +499,14 @@ static NumberOption NumberOptionAt(Resolution* r, uint32_t p, uint32_t at, bool*
 // plain number formats as :number does, over a currency or unit amount
 // as :currency or :unit does; the number functions read an amount's
 // number alone. mloc_messageFaultBadOperand for a unit amount whose unit
-// is not lexically one.
+// is not lexically one or is longer than a value's 32-bit length holds.
 static mlocMessageFaultKind MakeValue(NumberFunction function, const mlocMessageValue* a,
                                       const mlocDecimal* decimal, NumberValue* out)
 {
     bool money = a != NULL && a->kind == mloc_messageValueCurrency;
     bool measure = a != NULL && a->kind == mloc_messageValueUnit;
-    if (measure && !mlocUnitText(a->as.unit.unit, a->as.unit.unitLength))
+    if (measure && (a->as.unit.unitLength > UINT32_MAX ||
+                    !mlocUnitText(a->as.unit.unit, a->as.unit.unitLength)))
     {
         return mloc_messageFaultBadOperand;
     }

@@ -7,6 +7,11 @@
 // passed on from a number value, and selection by exact value and plural
 // category, with the faults of each.
 
+#ifdef __linux__
+// memfd_create, for a unit text of more than 4 GiB that takes 64 MiB.
+#define _GNU_SOURCE
+#endif
+
 #include "message_number.h"
 #include "message_prepare.h"
 #include "test_harness.h"
@@ -18,6 +23,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef __linux__
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 static mlocDataSet s_data;
 static mlocMessageFormatter s_en;
@@ -675,6 +685,56 @@ static void TestUnit(void)
     s_using = &s_en;
 }
 
+#if defined(__linux__) && SIZE_MAX > UINT32_MAX
+// A unit amount whose unit is 2^32 + 5 bytes of "meter-aaa...", which a
+// 32-bit length would cut to "meter": one 64 MiB file mapped 65 times in
+// a row, so that the text is real and takes 64 MiB.
+static void TestLongUnit(void)
+{
+    const size_t piece = (size_t)64 << 20;
+    const size_t pieces = 65;
+    const size_t length = ((size_t)1 << 32) + 5;
+    int file = memfd_create("unit", 0);
+    char* text = file < 0 || ftruncate(file, (off_t)piece) != 0
+                     ? MAP_FAILED
+                     : mmap(NULL, piece * pieces, PROT_NONE,
+                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    bool mapped = text != MAP_FAILED;
+    for (size_t i = 0; mapped && i < pieces; i++)
+    {
+        mapped = mmap(text + i * piece, piece, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, file,
+                      0) != MAP_FAILED;
+    }
+    if (!mapped)
+    {
+        // A system that cannot map it (a limit on address space, no
+        // memfd in a sandbox) cannot give such a text to the library
+        // either, so the check has nothing to cover there.
+        puts("test_message_numbers: no unit text of 4 GiB mapped; the long unit is not checked");
+    }
+    else
+    {
+        memset(text, 'a', piece);
+        memcpy(text, "meter-", 6);
+        mlocDecimal amount = {0};
+        CHECK(mlocParseDecimal("3.5", 3, &amount).status == mloc_success, "an amount is read");
+        mlocMessageArgument a[] = {
+            {"m", 1, {mloc_messageValueUnit, 0, {.unit = {&amount, text, length}}}},
+        };
+        CHECK(Formats("{$m :unit}", a, 1, "{$m}", s_badOperand),
+              "a unit longer than 32 bits of length is refused, not cut to its low bits");
+    }
+    if (text != MAP_FAILED)
+    {
+        munmap(text, piece * pieces);
+    }
+    if (file >= 0)
+    {
+        close(file);
+    }
+}
+#endif
+
 static void TestDirection(void)
 {
     static mlocMessageFormatter isolatingEn;
@@ -728,6 +788,9 @@ int main(void)
     TestCurrency();
     TestPrepared();
     TestUnit();
+#if defined(__linux__) && SIZE_MAX > UINT32_MAX
+    TestLongUnit();
+#endif
     TestDirection();
     return s_failures == 0 ? 0 : 1;
 }
