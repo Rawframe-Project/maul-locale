@@ -443,6 +443,18 @@ static void TestUsage(void)
                "F") &&
               Used("en-US-u-ms-metric", "meter", "road", mloc_unitWidthShort, "1000", "1 km"),
           "the -u-mu and -u-ms keys");
+    // A compound unit of the region's is of the key's system only if each
+    // of its parts is: mile-per-hour is not metric, kilometer-per-hour not
+    // the US system. ICU4C 79.1's answers.
+    CHECK(Used("en-US-u-ms-metric", "meter-per-second", "default", mloc_unitWidthShort, "10",
+               "36 km/h") &&
+              Used("de-u-ms-ussystem", "meter-per-second", "default", mloc_unitWidthShort, "10",
+                   "22 mi/h") &&
+              Used("en-US-u-ms-metric", "liter-per-100-kilometer", "vehicle-fuel",
+                   mloc_unitWidthShort, "8", "8 L/100 km") &&
+              Used("de-u-ms-ussystem", "liter-per-100-kilometer", "vehicle-fuel",
+                   mloc_unitWidthShort, "8", "29 mpg"),
+          "the -u-ms key over a region's compound units");
     CHECK(Used("en-US", "meter", "nonsense", mloc_unitWidthShort, "5", "16 ft") &&
               Used("en-US", "kilogram-meter", "default", mloc_unitWidthShort, "3",
                    "3 kg\xE2\x8B\x85m"),
