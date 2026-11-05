@@ -331,9 +331,11 @@ extern "C"
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
     ///         when rounding or a part passes MLOC_MAX_DECIMAL_DIGITS or
-    ///         MLOC_MAX_DECIMAL_EXPONENT; mloc_errorInvalid for a
-    ///         null pointer, or a formatter or decimal the library did not
-    ///         make.
+    ///         MLOC_MAX_DECIMAL_EXPONENT, or, with a usage, when the value
+    ///         converted passes what the exact integers
+    ///         (MLOC_MAX_UNIT_SCALE_BITS) or a decimal hold;
+    ///         mloc_errorInvalid for a null pointer, or a formatter or
+    ///         decimal the library did not make.
     /// @par Thread safety
     /// Safe from any thread.
     MLOC_NODISCARD MLOC_API mlocResult mlocUnitFormatter_Format(const mlocUnitFormatter* formatter,
