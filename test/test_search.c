@@ -498,6 +498,40 @@ static void TestRefusedCandidate(void)
           "a refused candidate, then a match past the ring: the bounds left as they were");
 }
 
+// Backward, a position before a run of accents longer than the walk
+// holds, and a match across such a run, are refused; so is a null text.
+static void TestBackwardLimits(void)
+{
+    static char text[3 + 2 * 400];
+    size_t size = 0;
+    text[size++] = 'x';
+    text[size++] = 'a';
+    for (int i = 0; i < 400; i++)
+    {
+        text[size++] = (char)0xCC;
+        text[size++] = (char)0x81;
+    }
+    size_t s = 99;
+    size_t e = 99;
+    CHECK(Make("en", "b", mloc_searchExact) &&
+              mlocSearcher_FindPrevious(&s_searcher, text, size, 1, &s, &e) == mloc_errorLimit &&
+              s == 99 && e == 99,
+          "backward, a position before a run of accents past the walk");
+    // "b" matches at the end; reaching back for "a" skips the accents,
+    // more than the walk takes without a primary weight.
+    text[0] = 'a';
+    text[size] = 'b';
+    CHECK(Make("en", "ab", mloc_searchPatternBaseWildcard) &&
+              mlocSearcher_FindPrevious(&s_searcher, text, size + 1, size + 1, &s, &e) ==
+                  mloc_errorLimit &&
+              s == 99 && e == 99,
+          "backward, a match whose elements hold a run of accents past the walk");
+    CHECK(mlocSearcher_FindPrevious(&s_searcher, nullptr, 1, 0, &s, &e) == mloc_errorInvalid &&
+              mlocSearcher_FindPreviousUtf16(&s_searcher, nullptr, 1, 0, &s, &e) ==
+                  mloc_errorInvalid,
+          "backward, a null text of a length");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -525,5 +559,6 @@ int main(void)
     TestRefusals();
     TestRefusalsKeepSearcher();
     TestRefusedCandidate();
+    TestBackwardLimits();
     return s_failures == 0 ? 0 : 1;
 }
