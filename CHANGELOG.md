@@ -5,6 +5,13 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.1...v0.12.2) (2026-11-05)
+
+
+### Fixed
+
+* **collate:** refuse collation data whose elements carry the fourth case ([#495](https://github.com/Rawframe-Project/maul-locale/issues/495)) ([f35bc65](https://github.com/Rawframe-Project/maul-locale/commit/f35bc65583fbc96c371f5f9c52ed02cc81cb3e09)), closes [#494](https://github.com/Rawframe-Project/maul-locale/issues/494)
+
 ## [0.12.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.0...v0.12.1) (2026-11-04)
 
 ### Fixed
