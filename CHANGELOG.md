@@ -5,6 +5,14 @@ Added, Changed, Fixed, Removed and Security. The project uses
 [Semantic Versioning](https://semver.org/). Before 1.0.0, any release
 may change the API, the ABI and every data format.
 
+## [0.12.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.2...v0.12.3) (2026-11-05)
+
+
+### Fixed
+
+* **catalog:** refuse a catalog key that is not UTF-8 ([#500](https://github.com/Rawframe-Project/maul-locale/issues/500)) ([d53d9e6](https://github.com/Rawframe-Project/maul-locale/commit/d53d9e640b2459846b96c5794ac1e4eece09602f)), closes [#499](https://github.com/Rawframe-Project/maul-locale/issues/499)
+* **message:** refuse a unit argument longer than 32 bits of length ([#503](https://github.com/Rawframe-Project/maul-locale/issues/503)) ([1fbeca6](https://github.com/Rawframe-Project/maul-locale/commit/1fbeca670bea49f7dee9026218e3ce806c458a5e)), closes [#501](https://github.com/Rawframe-Project/maul-locale/issues/501)
+
 ## [0.12.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.1...v0.12.2) (2026-11-05)
 
 ### Fixed
