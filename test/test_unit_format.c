@@ -445,6 +445,25 @@ static mlocResult UsedResult(const char* id, const char* unit, const char* usage
     return mlocUnitFormatter_Format(&formatter, &decimal, &output);
 }
 
+// A usage formatter's result for a range, its text aside.
+static mlocResult UsedRangeResult(const char* id, const char* unit, const char* usage,
+                                  const char* start, const char* end)
+{
+    mlocUnitOptions options = {.usage = usage, .usageLength = strlen(usage)};
+    mlocUnitFormatter formatter;
+    mlocDecimal a;
+    mlocDecimal b;
+    char buffer[1024];
+    mlocOutput output = {.buffer = buffer, .capacity = sizeof(buffer)};
+    if (Init(&formatter, id, unit, &options) < 0 ||
+        mlocParseDecimal(start, strlen(start), &a).status != mloc_success ||
+        mlocParseDecimal(end, strlen(end), &b).status != mloc_success)
+    {
+        return (mlocResult)-100;
+    }
+    return mlocUnitFormatter_FormatRange(&formatter, &a, &b, &output);
+}
+
 static void TestUsage(void)
 {
     CHECK(Used("en-US", "meter", "road", mloc_unitWidthShort, "0.3", "1 ft") &&
@@ -559,8 +578,9 @@ static void TestUsage(void)
                "F") &&
               UsedResult("en-US", "celsius", "weather", "1e-600") == mloc_errorLimit &&
               UsedResult("en-GB", "kilogram", "person", "1e-600") == mloc_errorLimit &&
-              UsedResult("en-US", "meter", "person-height", "1e1000") == mloc_errorLimit,
-          "a converted amount past the decimal's digits is refused");
+              UsedResult("en-US", "meter", "person-height", "1e1000") == mloc_errorLimit &&
+              UsedRangeResult("en-US", "celsius", "weather", "1", "1e-600") == mloc_errorLimit,
+          "a converted amount past the decimal's digits is refused, as a range's end too");
 }
 
 static void TestNumeric(void)

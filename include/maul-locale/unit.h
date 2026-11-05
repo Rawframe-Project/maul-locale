@@ -359,7 +359,9 @@ extern "C"
     ///                   as it was on any failure but mloc_errorCapacity.
     /// @return mloc_success; mloc_errorCapacity when the text does not fit
     ///         (textOut->length is then the length needed); mloc_errorLimit
-    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT;
+    ///         when rounding passes MLOC_MAX_DECIMAL_EXPONENT, or, with a
+    ///         usage, when an end converted passes what the exact integers
+    ///         (MLOC_MAX_UNIT_SCALE_BITS) or a decimal hold;
     ///         mloc_errorInvalid for a null pointer, a NaN end, a formatter of a mixed unit without
     ///         a usage (which ICU does not range either), a formatter of a coordinate, or a
     ///         formatter or decimal the library did not make.
