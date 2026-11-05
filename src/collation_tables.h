@@ -332,10 +332,35 @@ static inline uint32_t mlocCollationListStart(const CollationRoot* r, uint32_t n
     return mlocLoad32(r->listStarts + (size_t)number * 4);
 }
 
+// Whether an element's case bits, its tertiary's top two, are ones ICU
+// writes: lower, mixed or upper. The fourth is none, and the case level
+// would write it as a nibble past a byte.
+MLOC_NODISCARD static inline bool mlocCollationCaseValid(uint64_t element)
+{
+    return (element & 0xC000) != 0xC000;
+}
+
+// Whether the elements an expansion of CEs names all carry case bits ICU
+// writes.
+MLOC_NODISCARD static inline bool mlocCollationExpansionValid(const CollationRoot* r,
+                                                              uint32_t index, uint32_t length)
+{
+    for (uint32_t i = 0; i < length; i++)
+    {
+        if (!mlocCollationCaseValid(mlocCollationCe(r, index + i)))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Whether a CE32 is valid where it is found: one element anywhere; with
 // mayRefer (a trie value, a context list's default or entry) also an
 // expansion inside its array, an offset whose element exists, or the
-// implicit word. Every special CE32's low byte is 0xC0 and its tag.
+// implicit word. Every special CE32's low byte is 0xC0 and its tag. Each
+// element it gives, a long secondary or an expansion's, carries case bits
+// ICU writes.
 MLOC_NODISCARD static inline bool mlocCollationCe32Valid(const CollationRoot* r, uint32_t ce32,
                                                          bool mayRefer)
 {
@@ -356,12 +381,14 @@ MLOC_NODISCARD static inline bool mlocCollationCe32Valid(const CollationRoot* r,
     switch (mlocCe32Tag(ce32))
     {
     case collationTagLongPrimary:
-    case collationTagLongSecondary:
         return true;
+    case collationTagLongSecondary:
+        return mlocCollationCaseValid(mlocCe32Element(ce32));
     case collationTagExpansion32:
         return mayRefer && length > 0 && (uint64_t)index + length <= r->ce32Count;
     case collationTagExpansion:
-        return mayRefer && length > 0 && (uint64_t)index + length <= r->ceCount;
+        return mayRefer && length > 0 && (uint64_t)index + length <= r->ceCount &&
+               mlocCollationExpansionValid(r, index, length);
     case collationTagOffset:
         return mayRefer && index < r->ceCount;
     default:
