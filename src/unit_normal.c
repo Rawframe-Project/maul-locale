@@ -32,7 +32,8 @@ static void PrefixText(const UnitTable* t, int8_t prefix, const char** text, siz
 }
 
 // Appends text to an identifier being written.
-static bool AppendId(char* out, size_t room, size_t* at, const char* text, size_t length)
+MLOC_NODISCARD static bool AppendId(char* out, size_t room, size_t* at, const char* text,
+                                    size_t length)
 {
     if (length > room - *at)
     {
@@ -44,7 +45,8 @@ static bool AppendId(char* out, size_t room, size_t* at, const char* text, size_
 }
 
 // Writes a single unit as ICU's appendNeutralIdentifier does.
-static bool WritePart(const UnitTable* t, const UnitPart* part, char* out, size_t room, size_t* at)
+MLOC_NODISCARD static bool WritePart(const UnitTable* t, const UnitPart* part, char* out,
+                                     size_t room, size_t* at)
 {
     int power = part->power < 0 ? -part->power : part->power;
     // Each factor's power is 15 at most, merged across the factors.

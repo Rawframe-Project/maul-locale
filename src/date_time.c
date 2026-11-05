@@ -57,7 +57,7 @@ bool mlocDateTimeRoundingValid(const mlocDateTimeRounding* r)
 }
 
 // A field clamped into 0 to limit, or false when rejecting one outside.
-static bool Regulate(int64_t value, int64_t limit, bool reject, int64_t* out)
+MLOC_NODISCARD static bool Regulate(int64_t value, int64_t limit, bool reject, int64_t* out)
 {
     if (reject && (value < 0 || value > limit))
     {

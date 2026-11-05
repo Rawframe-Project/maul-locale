@@ -57,7 +57,7 @@ static Set ReadSet(const Engine* e, uint32_t index)
     return mlocReadSpelloutSet(&e->r, index);
 }
 
-static bool Fail(Engine* e, mlocResult error)
+MLOC_NODISCARD static bool Fail(Engine* e, mlocResult error)
 {
     if (e->error == mloc_success)
     {
@@ -104,7 +104,7 @@ typedef struct Magnitude
     const mlocDecimal* value;
 } Magnitude;
 
-static bool Divisible(const Magnitude* m, const Rule* rule)
+MLOC_NODISCARD static bool Divisible(const Magnitude* m, const Rule* rule)
 {
     if (!m->big)
     {
@@ -219,7 +219,7 @@ static int64_t FindFraction(const Engine* e, const Set* set, const mlocDecimal* 
     return set->first + winner;
 }
 
-static bool Enter(Engine* e, bool level)
+MLOC_NODISCARD static bool Enter(Engine* e, bool level)
 {
     if (e->error != mloc_success)
     {
@@ -260,7 +260,7 @@ bool mlocValidSpelloutCore(const NumberCore* core)
 
 // The formatter's core, from its source; false, the engine failed, when
 // it does not hold.
-static bool LoadCore(Engine* e, NumberCore* out)
+MLOC_NODISCARD static bool LoadCore(Engine* e, NumberCore* out)
 {
     memcpy(out, (const uint8_t*)e->f->source + offsetof(SpelloutFormat, core), sizeof(*out));
     return mlocValidSpelloutCore(out) || Fail(e, mloc_errorInvalid);
@@ -296,7 +296,7 @@ static void WritePattern(Engine* e, uint32_t index, const mlocDecimal* x)
         };
         if (mlocApplyPrecision(&precision, &d) != mloc_success)
         {
-            Fail(e, mloc_errorLimit);
+            (void)Fail(e, mloc_errorLimit);
             return;
         }
     }
@@ -333,7 +333,7 @@ static void WritePlural(Engine* e, const uint8_t* piece, const mlocDecimal* oper
     Write(e, e->r.text + mlocLoad16(plural + 4 * category), mlocLoad16(plural + 4 * category + 2));
 }
 
-static bool HasModulus(const Engine* e, const Rule* rule)
+MLOC_NODISCARD static bool HasModulus(const Engine* e, const Rule* rule)
 {
     for (uint32_t i = 0; i < rule->pieces; i++)
     {
@@ -353,7 +353,7 @@ static void SubInt(Engine* e, const Rule* rule, const uint8_t* piece, int64_t n)
     {
         // A rule a value below 2^63 is written by has a smaller base,
         // unless the file was crafted.
-        Fail(e, mloc_errorFormat);
+        (void)Fail(e, mloc_errorFormat);
         return;
     }
     int64_t d = (int64_t)rule->divisor;
@@ -471,7 +471,7 @@ static void Numerator(Engine* e, const Rule* rule, const uint8_t* piece, const m
     mlocDecimal scaled;
     if (!mlocSpelloutShift(x, rule->power >= 0 ? -rule->power : 0, &scaled))
     {
-        Fail(e, mloc_errorLimit);
+        (void)Fail(e, mloc_errorLimit);
         return;
     }
     mlocDecimal t = mlocSpelloutRound(&scaled, mloc_roundHalfCeil);
@@ -532,7 +532,7 @@ static void SubDec(Engine* e, const Rule* rule, const uint8_t* piece, const mloc
     }
     if (!done)
     {
-        Fail(e, mloc_errorLimit);
+        (void)Fail(e, mloc_errorLimit);
         return;
     }
     PassOn(e, target, &t);
@@ -541,7 +541,8 @@ static void SubDec(Engine* e, const Rule* rule, const uint8_t* piece, const mloc
 // A plural block's operand: the value divided by the rule's divisor, a
 // fraction's numerator ICU's round(number * divisor); false when it does
 // not fit.
-static bool PluralOperand(const Rule* rule, int64_t n, const mlocDecimal* x, mlocDecimal* out)
+MLOC_NODISCARD static bool PluralOperand(const Rule* rule, int64_t n, const mlocDecimal* x,
+                                         mlocDecimal* out)
 {
     if (x == nullptr)
     {
@@ -583,7 +584,7 @@ static void Pieces(Engine* e, const Rule* rule, int64_t n, const mlocDecimal* x)
             mlocDecimal operand;
             if (!PluralOperand(rule, n, x, &operand))
             {
-                Fail(e, mloc_errorLimit);
+                (void)Fail(e, mloc_errorLimit);
                 return;
             }
             WritePlural(e, piece, &operand);

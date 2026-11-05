@@ -26,7 +26,7 @@ typedef struct Cursor
     size_t at;
 } Cursor;
 
-static bool AtEnd(const Cursor* c)
+MLOC_NODISCARD static bool AtEnd(const Cursor* c)
 {
     return c->at == c->length;
 }
@@ -36,7 +36,7 @@ static char Next(const Cursor* c)
     return c->at < c->length ? c->text[c->at] : '\0';
 }
 
-static bool Take(Cursor* c, char ch)
+MLOC_NODISCARD static bool Take(Cursor* c, char ch)
 {
     if (c->at < c->length && c->text[c->at] == ch)
     {
@@ -47,23 +47,23 @@ static bool Take(Cursor* c, char ch)
 }
 
 // One of two characters, as the grammar's designators take either case.
-static bool TakeEither(Cursor* c, char upper, char lower)
+MLOC_NODISCARD static bool TakeEither(Cursor* c, char upper, char lower)
 {
     return Take(c, upper) || Take(c, lower);
 }
 
-static bool IsDigit(char ch)
+MLOC_NODISCARD static bool IsDigit(char ch)
 {
     return ch >= '0' && ch <= '9';
 }
 
-static bool IsAlpha(char ch)
+MLOC_NODISCARD static bool IsAlpha(char ch)
 {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
 // count digits as a number.
-static bool Digits(Cursor* c, int count, int32_t* out)
+MLOC_NODISCARD static bool Digits(Cursor* c, int count, int32_t* out)
 {
     // Callers read two, four or six digits, which fit 32 bits, and no rule
     // moves its cursor past the text's end.
@@ -88,7 +88,7 @@ static bool Digits(Cursor* c, int count, int32_t* out)
 }
 
 // Two digits from 0 to a limit.
-static bool Bounded(Cursor* c, int32_t limit, int32_t* out)
+MLOC_NODISCARD static bool Bounded(Cursor* c, int32_t limit, int32_t* out)
 {
     size_t start = c->at;
     if (!Digits(c, 2, out) || *out > limit)
@@ -100,7 +100,7 @@ static bool Bounded(Cursor* c, int32_t limit, int32_t* out)
 }
 
 // DateYear: four digits, or a sign and six that are not -000000.
-static bool Year(Cursor* c, int32_t* out)
+MLOC_NODISCARD static bool Year(Cursor* c, int32_t* out)
 {
     size_t start = c->at;
     bool negative = Take(c, '-');
@@ -117,7 +117,7 @@ static bool Year(Cursor* c, int32_t* out)
     return Digits(c, 4, out);
 }
 
-static bool Month(Cursor* c, int32_t* out)
+MLOC_NODISCARD static bool Month(Cursor* c, int32_t* out)
 {
     size_t start = c->at;
     if (!Bounded(c, 12, out) || *out == 0)
@@ -128,7 +128,7 @@ static bool Month(Cursor* c, int32_t* out)
     return true;
 }
 
-static bool Day(Cursor* c, int32_t* out)
+MLOC_NODISCARD static bool Day(Cursor* c, int32_t* out)
 {
     size_t start = c->at;
     if (!Bounded(c, 31, out) || *out == 0)
@@ -139,13 +139,13 @@ static bool Day(Cursor* c, int32_t* out)
     return true;
 }
 
-static bool IsLeap(int32_t year)
+MLOC_NODISCARD static bool IsLeap(int32_t year)
 {
     return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
 }
 
 // IsValidMonthDay, and IsValidDate with a year.
-static bool ValidMonthDay(int32_t month, int32_t day)
+MLOC_NODISCARD static bool ValidMonthDay(int32_t month, int32_t day)
 {
     bool thirty = month == 4 || month == 6 || month == 9 || month == 11;
     return !(day == 31 && (thirty || month == 2)) && !(month == 2 && day == 30);
@@ -178,7 +178,7 @@ typedef struct Fields
 } Fields;
 
 // DateSpec[Extended]: the separators both present or both absent.
-static bool DateSpec(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool DateSpec(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     if (!Year(c, &f->year))
@@ -197,7 +197,7 @@ static bool DateSpec(Cursor* c, Fields* f)
 }
 
 // TemporalDecimalFraction: a separator and 1 to 9 digits, as nanoseconds.
-static bool Fraction(Cursor* c, int32_t* out)
+MLOC_NODISCARD static bool Fraction(Cursor* c, int32_t* out)
 {
     size_t start = c->at;
     if (!Take(c, '.') && !Take(c, ','))
@@ -227,7 +227,7 @@ static bool Fraction(Cursor* c, int32_t* out)
 
 // TimeSpec[Extended]: an hour, then minutes, then seconds (60 allowed)
 // with a fraction; colons throughout or none.
-static bool TimeSpec(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool TimeSpec(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     f->minute = f->second = f->nanosecond = 0;
@@ -264,7 +264,8 @@ static bool TimeSpec(Cursor* c, Fields* f)
 // UTCOffset[SubMinutePrecision]: a sign and an hour, then minutes, then
 // (with sub-minute precision) seconds and a fraction; colons throughout
 // or none.
-static bool UTCOffset(Cursor* c, bool subMinute, int64_t* nanosecondsOut, bool* hasSecondsOut)
+MLOC_NODISCARD static bool UTCOffset(Cursor* c, bool subMinute, int64_t* nanosecondsOut,
+                                     bool* hasSecondsOut)
 {
     size_t start = c->at;
     bool negative = Next(c) == '-';
@@ -305,7 +306,7 @@ static bool UTCOffset(Cursor* c, bool subMinute, int64_t* nanosecondsOut, bool* 
 }
 
 // DateTimeUTCOffset[Z].
-static bool DateTimeOffset(Cursor* c, bool z, Fields* f)
+MLOC_NODISCARD static bool DateTimeOffset(Cursor* c, bool z, Fields* f)
 {
     if (z && TakeEither(c, 'Z', 'z'))
     {
@@ -320,19 +321,19 @@ static bool DateTimeOffset(Cursor* c, bool z, Fields* f)
     return f->hasOffset;
 }
 
-static bool IsZoneLeading(char ch)
+MLOC_NODISCARD static bool IsZoneLeading(char ch)
 {
     return IsAlpha(ch) || ch == '.' || ch == '_';
 }
 
-static bool IsZoneChar(char ch)
+MLOC_NODISCARD static bool IsZoneChar(char ch)
 {
     return IsZoneLeading(ch) || IsDigit(ch) || ch == '-' || ch == '+';
 }
 
 // TimeZoneIANAName: components of a leading character and more, joined
 // by slashes.
-static bool ZoneName(Cursor* c)
+MLOC_NODISCARD static bool ZoneName(Cursor* c)
 {
     size_t start = c->at;
     do
@@ -351,7 +352,7 @@ static bool ZoneName(Cursor* c)
 }
 
 // TimeZoneIdentifier: an offset to the minute, or a name.
-static bool ZoneIdentifier(Cursor* c, bool* isOffsetOut, int64_t* offsetOut)
+MLOC_NODISCARD static bool ZoneIdentifier(Cursor* c, bool* isOffsetOut, int64_t* offsetOut)
 {
     bool seconds = false;
     *isOffsetOut = Next(c) == '+' || Next(c) == '-';
@@ -359,7 +360,7 @@ static bool ZoneIdentifier(Cursor* c, bool* isOffsetOut, int64_t* offsetOut)
 }
 
 // TimeZoneAnnotation: [ !? TimeZoneIdentifier ].
-static bool ZoneAnnotation(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool ZoneAnnotation(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     bool isOffset = false;
@@ -379,13 +380,13 @@ static bool ZoneAnnotation(Cursor* c, Fields* f)
     return true;
 }
 
-static bool IsKeyLeading(char ch)
+MLOC_NODISCARD static bool IsKeyLeading(char ch)
 {
     return (ch >= 'a' && ch <= 'z') || ch == '_';
 }
 
 // AnnotationValue: components of letters and digits joined by hyphens.
-static bool AnnotationValue(Cursor* c)
+MLOC_NODISCARD static bool AnnotationValue(Cursor* c)
 {
     size_t start = c->at;
     do
@@ -405,7 +406,7 @@ static bool AnnotationValue(Cursor* c)
 }
 
 // Annotation: [ !? key = value ], with u-ca's rules noted.
-static bool Annotation(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool Annotation(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     if (!Take(c, '['))
@@ -449,7 +450,7 @@ static bool Annotation(Cursor* c, Fields* f)
 }
 
 // TimeZoneAnnotation? Annotations? to the end of the text.
-static bool Suffix(Cursor* c, bool zoneRequired, Fields* f)
+MLOC_NODISCARD static bool Suffix(Cursor* c, bool zoneRequired, Fields* f)
 {
     if (!ZoneAnnotation(c, f) && zoneRequired)
     {
@@ -462,7 +463,7 @@ static bool Suffix(Cursor* c, bool zoneRequired, Fields* f)
 }
 
 // AnnotatedDateTime[Zoned, TimeRequired].
-static bool AnnotatedDateTime(Cursor* c, bool zoned, bool timeRequired, Fields* f)
+MLOC_NODISCARD static bool AnnotatedDateTime(Cursor* c, bool zoned, bool timeRequired, Fields* f)
 {
     if (!DateSpec(c, f))
     {
@@ -483,14 +484,14 @@ static bool AnnotatedDateTime(Cursor* c, bool zoned, bool timeRequired, Fields* 
     return Suffix(c, zoned, f);
 }
 
-static bool Instant(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool Instant(Cursor* c, Fields* f)
 {
     return DateSpec(c, f) && (Take(c, ' ') || TakeEither(c, 'T', 't')) && TimeSpec(c, f) &&
            DateTimeOffset(c, true, f) && Suffix(c, false, f);
 }
 
 // DateSpecYearMonth: a year and a month.
-static bool YearMonthSpec(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool YearMonthSpec(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     if (!Year(c, &f->year))
@@ -509,7 +510,7 @@ static bool YearMonthSpec(Cursor* c, Fields* f)
 }
 
 // DateSpecMonthDay: an optional --, a month and a day.
-static bool MonthDaySpec(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool MonthDaySpec(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     if (Next(c) == '-')
@@ -538,7 +539,7 @@ static bool MonthDaySpec(Cursor* c, Fields* f)
 
 // Whether a text is exactly a DateSpecMonthDay or a DateSpecYearMonth,
 // AnnotatedTime's early error.
-static bool ReadsAsDate(const char* text, size_t length)
+MLOC_NODISCARD static bool ReadsAsDate(const char* text, size_t length)
 {
     Fields scratch = {0};
     Cursor c = {text, length, 0};
@@ -551,7 +552,7 @@ static bool ReadsAsDate(const char* text, size_t length)
 }
 
 // AnnotatedTime: T and a time, or a time that does not read as a date.
-static bool AnnotatedTime(Cursor* c, Fields* f)
+MLOC_NODISCARD static bool AnnotatedTime(Cursor* c, Fields* f)
 {
     size_t start = c->at;
     bool designated = TakeEither(c, 'T', 't');
@@ -569,7 +570,7 @@ static bool AnnotatedTime(Cursor* c, Fields* f)
     return Suffix(c, false, f);
 }
 
-static bool Goal(const char* text, size_t length, uint32_t format, Fields* f)
+MLOC_NODISCARD static bool Goal(const char* text, size_t length, uint32_t format, Fields* f)
 {
     Cursor c = {text, length, 0};
     *f = (Fields){.month = 1, .day = 1};
@@ -607,7 +608,7 @@ static bool Goal(const char* text, size_t length, uint32_t format, Fields* f)
 }
 
 // Whether a span reads iso8601, ignoring ASCII case.
-static bool IsIso(const char* text, mlocTextSpan span)
+MLOC_NODISCARD static bool IsIso(const char* text, mlocTextSpan span)
 {
     static const char s_iso[] = "iso8601";
     if (span.length != sizeof s_iso - 1)
@@ -627,7 +628,8 @@ static bool IsIso(const char* text, mlocTextSpan span)
 
 // ParseISODateTime's matching: the first goal allowed that matches, then
 // the annotation rules.
-static bool Match(const char* text, size_t length, uint32_t formats, Fields* f, uint32_t* formatOut)
+MLOC_NODISCARD static bool Match(const char* text, size_t length, uint32_t formats, Fields* f,
+                                 uint32_t* formatOut)
 {
     for (uint32_t format = 1; format <= mloc_formatYearMonth; format <<= 1)
     {
@@ -704,7 +706,7 @@ mlocResult mlocParseUTCOffset(const char* text, size_t length, int64_t* nanoseco
 }
 
 // ParseTimeZoneIdentifier of a whole span.
-static bool Identifier(const char* text, mlocTextSpan span, mlocTimeZoneParse* out)
+MLOC_NODISCARD static bool Identifier(const char* text, mlocTextSpan span, mlocTimeZoneParse* out)
 {
     Cursor c = {text + span.start, span.length, 0};
     bool isOffset = false;
@@ -835,7 +837,7 @@ static int Designator(char ch, const char* designators, int count)
 }
 
 // DurationDate's parts, years to days, each once and in order.
-static bool DateParts(Cursor* c, Wide* f, bool* anyOut)
+MLOC_NODISCARD static bool DateParts(Cursor* c, Wide* f, bool* anyOut)
 {
     int next = 0;
     while (IsDigit(Next(c)))
@@ -857,7 +859,7 @@ static bool DateParts(Cursor* c, Wide* f, bool* anyOut)
 // DurationTime's parts, hours to seconds, each once and in order; only
 // the last may have a fraction, which carries down into the fields below
 // it exactly (its nanoseconds are a whole number for 1 to 9 digits).
-static bool TimeParts(Cursor* c, Wide* f)
+MLOC_NODISCARD static bool TimeParts(Cursor* c, Wide* f)
 {
     static const uint64_t s_unitNanoseconds[3] = {UINT64_C(3600000000000), 60000000000, 1000000000};
     int next = 0;

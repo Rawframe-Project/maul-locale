@@ -177,7 +177,7 @@ static int64_t TimeAt(const ZoneTables* t, const ZoneRecord* z, uint32_t i)
 // A zone's ranges within the sections, its offsets' places, its name
 // (whose identifier may read its primary's equal data), and its times
 // ascending.
-static bool ValidZone(const ZoneTables* t, uint32_t zone)
+MLOC_NODISCARD static bool ValidZone(const ZoneTables* t, uint32_t zone)
 {
     ZoneRecord z = mlocZoneRecord(t, zone);
     const uint8_t* reserved = t->zones + (size_t)zone * zoneRecordSize + 21;
@@ -209,7 +209,7 @@ static int Folded(uint8_t c)
 
 // Whether an identifier's name sorts strictly after the one before it,
 // letters folded.
-static bool After(const char* a, size_t aLength, const char* b, size_t bLength)
+MLOC_NODISCARD static bool After(const char* a, size_t aLength, const char* b, size_t bLength)
 {
     for (size_t i = 0; i < aLength && i < bLength; i++)
     {
@@ -223,7 +223,7 @@ static bool After(const char* a, size_t aLength, const char* b, size_t bLength)
     return bLength > aLength;
 }
 
-static bool ValidIdentifier(const ZoneTables* t, uint32_t identifier)
+MLOC_NODISCARD static bool ValidIdentifier(const ZoneTables* t, uint32_t identifier)
 {
     const uint8_t* p = t->identifiers + (size_t)identifier * zoneIdentifierSize;
     uint32_t zone = mlocZoneIdentifierZone(t, identifier);
@@ -250,7 +250,7 @@ static bool ValidIdentifier(const ZoneTables* t, uint32_t identifier)
     return identifier == 0 || After(previous, previousLength, name, length);
 }
 
-static bool ValidClosing(const ZoneTables* t, uint32_t closing)
+MLOC_NODISCARD static bool ValidClosing(const ZoneTables* t, uint32_t closing)
 {
     int32_t year = mlocZoneClosingYear(t, closing);
     if (year < minClosingYear || year > maxClosingYear)
@@ -273,7 +273,7 @@ static bool ValidClosing(const ZoneTables* t, uint32_t closing)
 
 // The primaries' list: each a primary identifier, in strictly ascending
 // byte order, as many as the identifiers that are their own primary.
-static bool ValidPrimaries(const ZoneTables* t)
+MLOC_NODISCARD static bool ValidPrimaries(const ZoneTables* t)
 {
     uint32_t primaries = 0;
     for (uint32_t i = 0; i < t->identifierCount; i++)

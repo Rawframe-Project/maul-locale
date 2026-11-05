@@ -57,12 +57,12 @@ typedef struct Lsr
 // gets likely subtags with ICU's lookup (a macro region, by the match
 // table's flags, takes the likely region). False when the table has no
 // answer, which only a table without "und" lacks.
-bool mlocMakeLsr(const Likely* likely, const uint8_t* regionGroups, const mlocLocale* locale,
-                 uint32_t index, Lsr* lsrOut);
+MLOC_NODISCARD bool mlocMakeLsr(const Likely* likely, const uint8_t* regionGroups,
+                                const mlocLocale* locale, uint32_t index, Lsr* lsrOut);
 
 // The likely script and region of an LSR's language alone, as ICU's
 // compareLikely reads them: "und"'s for a language the table lacks.
-bool mlocLikelyOfLanguage(const Likely* likely, const Lsr* lsr, uint32_t* scriptOut,
-                          uint32_t* regionOut);
+MLOC_NODISCARD bool mlocLikelyOfLanguage(const Likely* likely, const Lsr* lsr, uint32_t* scriptOut,
+                                         uint32_t* regionOut);
 
 #endif

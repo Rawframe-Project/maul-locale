@@ -33,7 +33,7 @@ enum
 // The collation root in the first source that has one, and the keys'
 // version: the key format and the root's stored hash, which its
 // validator checked when the data was opened.
-static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* version)
+MLOC_NODISCARD static bool FindRoot(const mlocDataSet* data, CollationRoot* root, uint64_t* version)
 {
     for (size_t i = 0; i < data->count; i++)
     {
@@ -70,7 +70,7 @@ typedef struct TypeWalk
     size_t defaultLength;
 } TypeWalk;
 
-static bool VisitTypes(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool VisitTypes(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)view;
     (void)depth;
@@ -86,8 +86,8 @@ static bool VisitTypes(void* context, DataSpan unit, const DataView* view, int d
     return w->hit;
 }
 
-static bool Walk(const mlocDataSet* data, const mlocLocale* locale, TypeWalk* w, const char* name,
-                 size_t length)
+MLOC_NODISCARD static bool Walk(const mlocDataSet* data, const mlocLocale* locale, TypeWalk* w,
+                                const char* name, size_t length)
 {
     w->name = name;
     w->length = length;
@@ -96,7 +96,7 @@ static bool Walk(const mlocDataSet* data, const mlocLocale* locale, TypeWalk* w,
                                 VisitTypes, w);
 }
 
-static bool Is(const char* value, size_t length, const char* text);
+MLOC_NODISCARD static bool Is(const char* value, size_t length, const char* text);
 
 // ICU4C's CollationLoader's types tried: the asked one, then a
 // "search..." one as "search", then the default, then standard.
@@ -182,7 +182,7 @@ static mlocResult FindTailoring(const mlocDataSet* data, const mlocLocale* local
     return mloc_success;
 }
 
-static bool Is(const char* value, size_t length, const char* text)
+MLOC_NODISCARD static bool Is(const char* value, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(value, text, length) == 0;
 }
@@ -206,7 +206,7 @@ static char Lower(char c)
 }
 
 // A reorder code from its text (any case): a group, others, or a script.
-static bool Code(const char* text, size_t length, uint32_t* codeOut)
+MLOC_NODISCARD static bool Code(const char* text, size_t length, uint32_t* codeOut)
 {
     static const char* const groups[] = {"space", "punct", "symbol", "currency", "digit"};
     char word[8];
@@ -302,7 +302,7 @@ static void FromLocale(Collator* c, const mlocLocale* locale)
     }
 }
 
-static bool OptionsValid(const mlocCollatorOptions* o)
+MLOC_NODISCARD static bool OptionsValid(const mlocCollatorOptions* o)
 {
     return (uint32_t)o->strength <= mloc_strengthIdentical &&
            (uint32_t)o->alternate <= mloc_alternateShifted &&
@@ -348,7 +348,7 @@ static mlocResult FromOptions(Collator* c, const mlocCollatorOptions* o)
 
 // The radical-stroke Han table in the first source that has one, its
 // bytes joining the version; false when none has.
-static bool FindHan(const mlocDataSet* data, Collator* c)
+MLOC_NODISCARD static bool FindHan(const mlocDataSet* data, Collator* c)
 {
     for (size_t i = 0; i < data->count; i++)
     {
@@ -458,8 +458,8 @@ mlocResult mlocInitCollator(const mlocDataSet* data, const mlocLocale* locale,
 
 // The general path's parts read, then the texts' identical prefix; false
 // for a collator whose settings are none the library writes.
-static bool Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdText y,
-                   size_t* prefixOut)
+MLOC_NODISCARD static bool Prefix(const mlocCollator* collator, Collator* c, NfdText x, NfdText y,
+                                  size_t* prefixOut)
 {
     if (!mlocReadCollatorRest(collator, c))
     {

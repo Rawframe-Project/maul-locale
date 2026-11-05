@@ -53,7 +53,7 @@ static void Put(Writer* w, const void* bytes, size_t length)
 
 // Whether a part lies within the text the first pass wrote, the pass
 // marked overrun when it does not.
-static bool Within(Writer* w, size_t start, size_t length)
+MLOC_NODISCARD static bool Within(Writer* w, size_t start, size_t length)
 {
     if (start > w->limit || length > w->limit - start)
     {
@@ -144,7 +144,7 @@ static void PutFallback(Formatting* f, const Value* v)
 // An argument written with no function: a number as its plain decimal
 // (the number functions come with their slice); an object cannot be,
 // which is reported, false.
-static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
+MLOC_NODISCARD static bool PutArgument(Formatting* f, const Value* v, uint32_t expression)
 {
     // A decimal's text, which can be far longer, is written a piece at a
     // time.
@@ -189,7 +189,7 @@ static mlocOutput Room(Writer* w, Inner* inner)
 // A function's value, written into the room left by its program
 // function's format entry or by the number formatter; a fault, or no
 // format entry, is reported, false.
-static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
+MLOC_NODISCARD static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
 {
     Writer* w = &f->w;
     Inner inner;
@@ -260,7 +260,7 @@ static bool PutResolved(Formatting* f, const Value* v, uint32_t expression)
 // Writes a value; false when the expression's own fallback must stand
 // in its place (a fault reported, a fallback value, which is the
 // expression's, or :string over a failed operand).
-static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
+MLOC_NODISCARD static bool PutValue(Formatting* f, const Value* v, uint32_t expression)
 {
     ValueKind kind = v->kind == valueString ? v->behind : v->kind;
     if (kind == valueText)
@@ -307,7 +307,8 @@ static void PutMark(Writer* w, const char* mark)
 
 // Measures a value's text, for the pass that reports parts: false when
 // it falls back.
-static bool Measure(Formatting* f, const Value* v, uint32_t expression, size_t* lengthOut)
+MLOC_NODISCARD static bool Measure(Formatting* f, const Value* v, uint32_t expression,
+                                   size_t* lengthOut)
 {
     Writer saved = f->w;
     f->w = (Writer){NULL, 0, 0, NULL, NULL, 0, false};
@@ -401,7 +402,7 @@ typedef struct Selector
 // Whether a selector's value can select: a :string value, a mloc:list
 // value, a number value whose select was not a variable's or an operand's, or a program
 // function's with a match entry.
-static bool Selectable(const Formatting* f, const Value* v)
+MLOC_NODISCARD static bool Selectable(const Formatting* f, const Value* v)
 {
     return v->kind == valueString || v->kind == valueList || v->kind == valueGender ||
            (v->kind == valueNumber && v->number.selectable) ||
@@ -411,7 +412,8 @@ static bool Selectable(const Formatting* f, const Value* v)
 // Whether a key matches a selector. A bad variant key is reported and
 // matches nothing; another fault breaks the selector, reported once as a
 // bad selector.
-static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* key, size_t length)
+MLOC_NODISCARD static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* key,
+                                      size_t length)
 {
     if (s->broken)
     {
@@ -472,7 +474,7 @@ static bool KeyMatches(Formatting* f, Selector* s, uint32_t at, const uint8_t* k
 }
 
 // Whether each of a variant's keys matches its selector.
-static bool VariantMatches(Formatting* f, Selector* selectors, uint32_t variant)
+MLOC_NODISCARD static bool VariantMatches(Formatting* f, Selector* selectors, uint32_t variant)
 {
     const MessageView* v = &f->r.h.view;
     for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
@@ -494,8 +496,8 @@ static bool VariantMatches(Formatting* f, Selector* selectors, uint32_t variant)
 // Whether a matching variant is a better match than another: at the first
 // selector whose keys differ, a key beats "*", and of two keys the one
 // the function calls better; keys neither of which is better tie there.
-static bool BetterVariant(const Formatting* f, const Selector* selectors, uint32_t variant,
-                          uint32_t than)
+MLOC_NODISCARD static bool BetterVariant(const Formatting* f, const Selector* selectors,
+                                         uint32_t variant, uint32_t than)
 {
     const MessageView* v = &f->r.h.view;
     for (uint32_t s = 0; s < v->count[messageSelectors]; s++)
@@ -583,12 +585,12 @@ static uint32_t SelectVariant(Formatting* f)
     return best;
 }
 
-static bool GoodDecimal(const mlocDecimal* decimal)
+MLOC_NODISCARD static bool GoodDecimal(const mlocDecimal* decimal)
 {
     return decimal != NULL && mlocValidDecimal(decimal);
 }
 
-static bool GoodCurrency(const mlocMessageValue* v)
+MLOC_NODISCARD static bool GoodCurrency(const mlocMessageValue* v)
 {
     const char* code = v->as.currency.code;
     for (int i = 0; i < 3; i++)
@@ -604,7 +606,7 @@ static bool GoodCurrency(const mlocMessageValue* v)
 // Whether a value holds what its kind says: a string where its length
 // asks, a decimal, an amount and its code, a date, time or instant the
 // library makes, a zone it made, a known kind.
-static bool GoodValue(const mlocMessageValue* v)
+MLOC_NODISCARD static bool GoodValue(const mlocMessageValue* v)
 {
     switch (v->kind)
     {
@@ -642,7 +644,7 @@ static bool GoodValue(const mlocMessageValue* v)
 
 // Whether the arguments have names where their lengths ask and hold
 // what their kinds say.
-static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
+MLOC_NODISCARD static bool GoodArguments(const mlocMessageArgument* arguments, size_t count)
 {
     for (size_t i = 0; i < count; i++)
     {

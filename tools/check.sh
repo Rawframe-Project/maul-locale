@@ -113,6 +113,8 @@ source_checks() {
     python3 tools/check_docs.py
     python3 tools/check_guide.py
     python3 tools/check_data_format.py
+    python3 tools/check_nodiscard.py --self-test
+    python3 tools/check_nodiscard.py
     python3 tools/check_test_hygiene.py --self-test
     python3 tools/check_test_hygiene.py
     if [ -f "$org/scripts/docs_check.py" ]; then

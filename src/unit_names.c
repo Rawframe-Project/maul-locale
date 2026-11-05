@@ -16,7 +16,7 @@
 #include <string.h>
 
 // Whether a byte may be in an identifier.
-static bool IdByte(uint8_t c)
+MLOC_NODISCARD static bool IdByte(uint8_t c)
 {
     return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == ':';
 }
@@ -116,7 +116,7 @@ bool mlocValidUnitCases(const DataView* view, DataSpan payload)
 }
 
 // Whether a derivation value is one its place allows.
-static bool ValidDerived(uint32_t at, uint8_t value)
+MLOC_NODISCARD static bool ValidDerived(uint32_t at, uint8_t value)
 {
     if (value == unitDerivedNone)
     {
@@ -133,7 +133,7 @@ static bool ValidDerived(uint32_t at, uint8_t value)
 
 // Whether a derivation's language is lowercase letters then NULs, and
 // its values those of their places.
-static bool ValidDerivation(const uint8_t* record)
+MLOC_NODISCARD static bool ValidDerivation(const uint8_t* record)
 {
     uint32_t length = 0;
     while (length < unitDerivationLanguage && record[length] != 0)
@@ -233,7 +233,7 @@ typedef struct Gathering
     uint16_t code;
 } Gathering;
 
-static bool Gather(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool Gather(void* context, DataSpan unit, const DataView* view, int depth)
 {
     (void)depth;
     Gathering* g = context;
@@ -356,7 +356,7 @@ bool mlocUnitDerivation(const mlocDataSet* data, const mlocLocale* locale, uint3
 }
 
 // Whether text holds "{0}" exactly once.
-static bool OnePlaceholder(const uint8_t* text, uint32_t length)
+MLOC_NODISCARD static bool OnePlaceholder(const uint8_t* text, uint32_t length)
 {
     uint32_t count = 0;
     for (uint32_t at = 0; at + 3 <= length; at++)

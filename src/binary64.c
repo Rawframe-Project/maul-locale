@@ -66,12 +66,12 @@ static Wide ShiftLeft(Wide v, int n)
     return (Wide){(v.high << n) | (v.low >> (64 - n)), v.low << n};
 }
 
-static bool Bit(Wide v, int i)
+MLOC_NODISCARD static bool Bit(Wide v, int i)
 {
     return ((i >= 64 ? v.high >> (i - 64) : v.low >> i) & 1) != 0;
 }
 
-static bool AtLeast(Wide a, Wide b)
+MLOC_NODISCARD static bool AtLeast(Wide a, Wide b)
 {
     return a.high != b.high ? a.high > b.high : a.low >= b.low;
 }

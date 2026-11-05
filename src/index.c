@@ -28,8 +28,8 @@ static const char s_ellipsis[] = "\xE2\x80\xA6";
 
 // A special label as given, or "…"; false when it is no UTF-8 (its length
 // is checked apart).
-static bool SpecialLabel(const char* text, size_t length, const uint8_t** textOut,
-                         uint32_t* lengthOut)
+MLOC_NODISCARD static bool SpecialLabel(const char* text, size_t length, const uint8_t** textOut,
+                                        uint32_t* lengthOut)
 {
     if (text == nullptr)
     {
@@ -42,7 +42,7 @@ static bool SpecialLabel(const char* text, size_t length, const uint8_t** textOu
     return muniValidateUtf8(text, length).status == muni_success;
 }
 
-static bool Specials(const mlocIndexOptions* o, IndexSpecials* out)
+MLOC_NODISCARD static bool Specials(const mlocIndexOptions* o, IndexSpecials* out)
 {
     return SpecialLabel(o->underflowLabel, o->underflowLength, &out->text[0], &out->length[0]) &&
            SpecialLabel(o->inflowLabel, o->inflowLength, &out->text[1], &out->length[1]) &&
@@ -119,7 +119,7 @@ mlocResult mlocGetIndexBucket(const void* index, uint32_t bucket, mlocIndexBucke
 // getBucketIndex: the last bucket, shown or not, whose lower boundary
 // the name sorts at or after, as the shown bucket it counts as; false when
 // a record it reads passes the pool or names no shown bucket.
-static bool Find(const IndexView* v, NfdText name, uint32_t* bucketOut)
+MLOC_NODISCARD static bool Find(const IndexView* v, NfdText name, uint32_t* bucketOut)
 {
     // The fast Latin compare where it serves a UTF-8 name (the boundaries
     // are UTF-8), as mlocCollator_Compare; else the name's key, read once, against

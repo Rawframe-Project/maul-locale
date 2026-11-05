@@ -126,7 +126,7 @@ static Value FallbackVariable(uint32_t variable)
     return v;
 }
 
-static bool IsFallback(ValueKind kind)
+MLOC_NODISCARD static bool IsFallback(ValueKind kind)
 {
     return kind >= valueFallbackVariable;
 }
@@ -233,7 +233,8 @@ MLOC_NOINLINE static void CheckParameters(Resolution* r, uint32_t first, uint32_
 }
 
 // Whether a parameter is an option of a name.
-static bool OptionNamed(const Resolution* r, uint32_t p, const char* name, size_t length)
+MLOC_NODISCARD static bool OptionNamed(const Resolution* r, uint32_t p, const char* name,
+                                       size_t length)
 {
     uint32_t kind = Field(r, messageParameters, p, 0);
     MessageText option = String(r, messageParameters, p, 1);
@@ -277,7 +278,7 @@ typedef struct Directed
     bool isolate;
 } Directed;
 
-static bool TextIs(const Value* v, const char* text)
+MLOC_NODISCARD static bool TextIs(const Value* v, const char* text)
 {
     size_t length = strlen(text);
     bool textual = v->kind == valueText || (v->kind == valueString && v->behind == valueText);
@@ -428,7 +429,7 @@ MLOC_NOINLINE static Value CallProgram(Resolution* r, uint32_t expression, uint3
 
 // A whole number an option's value holds, for a digit size: an integer
 // argument, or a double, decimal or number value that is whole.
-static bool WholeValue(const Value* v, int64_t* out)
+MLOC_NODISCARD static bool WholeValue(const Value* v, int64_t* out)
 {
     mlocDecimal decimal;
     if (v->kind == valueNumber)

@@ -64,7 +64,7 @@ static uint32_t FindSystem(DataSpan systems, uint64_t id)
     return numberAlgorithmic;
 }
 
-static bool Is(const char* value, size_t length, const char* text)
+MLOC_NODISCARD static bool Is(const char* value, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(value, text, length) == 0;
 }
@@ -164,8 +164,8 @@ bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index)
 
 // Fills a core from a system, an entry whose symbol set is in bounds and
 // a pattern index.
-static bool Fill(NumberCore* core, const Units* u, uint32_t system, const uint8_t* entry,
-                 uint8_t minGrouping, uint32_t pattern)
+MLOC_NODISCARD static bool Fill(NumberCore* core, const Units* u, uint32_t system,
+                                const uint8_t* entry, uint8_t minGrouping, uint32_t pattern)
 {
     NumberTable symbols = mlocReadNumberTable(u->symbols, 2 * numberSymbolCount);
     uint32_t set = mlocLoad16(entry + entrySymbols);
@@ -225,7 +225,7 @@ bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t leng
 }
 
 // Whether a pattern's prefix holds a currency placeholder.
-static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
+MLOC_NODISCARD static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 {
     NumberTable t = mlocReadNumberTable(patterns, numberPatternSize);
     MLOC_ASSERT(index < t.recordCount);
@@ -245,9 +245,10 @@ static bool CurrencyInPrefix(DataSpan patterns, uint32_t index)
 
 // The index of an entry's currency pattern of a style; false when the
 // data has no pattern sets or the indexes leave them.
-static bool CurrencyPatternOf(const DataView* view, const Units* u, const uint8_t* entry,
-                              const CurrencyStyle* style, uint32_t* patternOut, uint32_t* parseOut,
-                              uint32_t* compactOut, CurrencyTexts* texts)
+MLOC_NODISCARD static bool CurrencyPatternOf(const DataView* view, const Units* u,
+                                             const uint8_t* entry, const CurrencyStyle* style,
+                                             uint32_t* patternOut, uint32_t* parseOut,
+                                             uint32_t* compactOut, CurrencyTexts* texts)
 {
     DataSpan sets;
     if (!mlocFindDataUnit(view, kindCurrencyPatterns, dataNoLocale, &sets))
@@ -553,7 +554,7 @@ static void PutSymbol(NumberWriter* w, const NumberCore* c, NumberSymbol symbol,
 // Whether a code point is one ICU trims from the ends of a unit or
 // compact field: [[:Zs:][\u0009][:Bidi_Control:][:Variation_Selector:]]
 // (its default ignorables).
-static bool Ignorable(uint32_t c)
+MLOC_NODISCARD static bool Ignorable(uint32_t c)
 {
     return c == 0x09 || c == 0x20 || c == 0xA0 || c == 0x061C || c == 0x1680 ||
            (c >= 0x180B && c <= 0x180F && c != 0x180E) || (c >= 0x2000 && c <= 0x200A) ||
@@ -740,7 +741,7 @@ static SignSlot SlotOf(NumberSign sign, bool approximately)
     return approximately ? slotApproximatelyPlus : slotPlus;
 }
 
-static bool HasMinus(const NumberCore* c, int affix)
+MLOC_NODISCARD static bool HasMinus(const NumberCore* c, int affix)
 {
     return memchr(c->affixText + c->affixStart[affix], numberAffixMinus, c->affixLength[affix]) !=
            nullptr;
@@ -785,7 +786,7 @@ static void PutDigit(NumberWriter* w, const NumberCore* c, uint8_t digit, uint32
 
 // Whether a group separator follows the digit at a power: at the primary
 // size, then every secondary size.
-static bool GroupAfter(const NumberCore* c, int64_t power)
+MLOC_NODISCARD static bool GroupAfter(const NumberCore* c, int64_t power)
 {
     return power == c->primary || (power > c->primary && (power - c->primary) % c->secondary == 0);
 }

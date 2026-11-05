@@ -102,7 +102,7 @@ static const char* UzbekNumberWord(uint8_t digit, int32_t power)
 }
 
 // Whether a word has two syllables or more.
-static bool Polysyllabic(const uint8_t* word, size_t end)
+MLOC_NODISCARD static bool Polysyllabic(const uint8_t* word, size_t end)
 {
     size_t vowels = 0;
     while (end > 0)
@@ -119,8 +119,8 @@ static bool Polysyllabic(const uint8_t* word, size_t end)
 // in bek and yoʻq, written g or gʻ before a possessive (the vowel-first
 // suffixes); after a consonant it stays (xalqi, obeliski).
 // No dictionary of the loans that keep it (ishtiroki) is free to use.
-static bool UzbekStem(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
-                      TurkicStem* out)
+MLOC_NODISCARD static bool UzbekStem(const uint8_t* word, size_t length, uint8_t marks,
+                                     TurkicSuffixes* suffixes, TurkicStem* out)
 {
     (void)marks;
     if (!suffixes->vowelFirst)

@@ -163,7 +163,7 @@ static const char* const s_weak[13] = {"k",  "p",  "t",  "",   "v", "d", "ng",
 // Whether the letters from one on are the last syllable's vowel group
 // and end, three letters at most (the consonant before them is the one
 // that grades: katu, hammas, onneton).
-static bool LastSyllable(const FinnishWord* w, size_t from)
+MLOC_NODISCARD static bool LastSyllable(const FinnishWord* w, size_t from)
 {
     if (w->count - from > 3)
     {
@@ -186,7 +186,7 @@ static bool LastSyllable(const FinnishWord* w, size_t from)
 
 // Whether the grade's consonants stand at a word's letter at, before
 // the last syllable's vowel.
-static bool GradesAt(const FinnishWord* w, size_t at, const char* from, size_t n)
+MLOC_NODISCARD static bool GradesAt(const FinnishWord* w, size_t at, const char* from, size_t n)
 {
     if (at + n >= w->count || !mlocFinnishIsVowel(w->c[at + n]) || !LastSyllable(w, at + n))
     {

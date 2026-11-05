@@ -22,12 +22,12 @@ enum
     maxCode = 160,
 };
 
-static bool Alpha(char c)
+MLOC_NODISCARD static bool Alpha(char c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-static bool Digit(char c)
+MLOC_NODISCARD static bool Digit(char c)
 {
     return c >= '0' && c <= '9';
 }
@@ -43,7 +43,7 @@ static char Upper(char c)
 }
 
 // Whether text is all letters and digits, its length in a range.
-static bool Alnum(const char* text, size_t length, size_t least, size_t most)
+MLOC_NODISCARD static bool Alnum(const char* text, size_t length, size_t least, size_t most)
 {
     for (size_t i = 0; i < length; i++)
     {
@@ -57,7 +57,7 @@ static bool Alnum(const char* text, size_t length, size_t least, size_t most)
 
 // A key and value's syntax: a key of two letters or digits, then
 // subtags of 3 to 8 joined by '-'.
-static bool KeyValue(const char* text, size_t length)
+MLOC_NODISCARD static bool KeyValue(const char* text, size_t length)
 {
     if (length < 6 || !Alnum(text, 2, 2, 2) || text[2] != '-')
     {
@@ -82,8 +82,8 @@ static bool KeyValue(const char* text, size_t length)
 // A language id in canonical syntax ("en-GB"), with CLDR's aliases
 // applied when asked ("tl" is "fil"), and with no extension; false when
 // it is not one or the aliases cannot be applied.
-static bool Language(const mlocDataSet* data, const char* code, size_t length, bool aliases,
-                     char* out, size_t* lengthOut)
+MLOC_NODISCARD static bool Language(const mlocDataSet* data, const char* code, size_t length,
+                                    bool aliases, char* out, size_t* lengthOut)
 {
     char text[maxCode];
     mlocLocale locale;
@@ -130,8 +130,9 @@ static bool Language(const mlocDataSet* data, const char* code, size_t length, b
 // Writes a code in its canonical case behind its namespace ("l:en-GB",
 // "t:ca-gregory"); *fallbackOut is where the text a missing name gives
 // starts. False for a code not of the type's syntax.
-static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* code, size_t length,
-                      char* out, size_t* lengthOut, size_t* fallbackOut)
+MLOC_NODISCARD static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* code,
+                                     size_t length, char* out, size_t* lengthOut,
+                                     size_t* fallbackOut)
 {
     static const char s_prefixes[] = "lsrvktmd";
     // mlocGetName refuses any other type before it asks.
@@ -193,8 +194,8 @@ static bool Canonical(const mlocDataSet* data, mlocNameType type, const char* co
 // Whether the first letter is titlecased in a context: by the type's
 // usage of the context transforms (a measurement system and a
 // subdivision have none).
-static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale, mlocNameType type,
-                        mlocCapitalization capitalization)
+MLOC_NODISCARD static bool Capitalizes(const mlocDataSet* data, const mlocLocale* locale,
+                                       mlocNameType type, mlocCapitalization capitalization)
 {
     static const ContextUsage s_usages[] = {contextLanguages,  contextScript,    contextTerritory,
                                             contextVariant,    contextKey,       contextKeyValue,
@@ -234,8 +235,9 @@ static mlocResult Write(const mlocDataSet* data, const mlocLocale* locale, const
 // A language id's name by its CLDR alias, as ICU4C looks a deprecated
 // code up when the chain has no name of its own for it ("tl" as "fil",
 // "tw" as "ak"); false when the alias changes nothing or has no name.
-static bool Replaced(const mlocDataSet* data, const mlocLocale* locale, const char* code,
-                     size_t length, mlocNameType type, NameField field, NameText* out)
+MLOC_NODISCARD static bool Replaced(const mlocDataSet* data, const mlocLocale* locale,
+                                    const char* code, size_t length, mlocNameType type,
+                                    NameField field, NameText* out)
 {
     char plain[2 + maxCode] = "l:";
     char replaced[2 + maxCode] = "l:";

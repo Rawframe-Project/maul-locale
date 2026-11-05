@@ -22,7 +22,7 @@ typedef struct Parser
     size_t modelAt;
 } Parser;
 
-static bool Fail(Parser* p)
+MLOC_NODISCARD static bool Fail(Parser* p)
 {
     if (p->syntaxAt == SIZE_MAX)
     {
@@ -40,12 +40,12 @@ static void ModelError(Parser* p, mlocMessageError error, size_t at)
     }
 }
 
-static bool At(const Parser* p, int c)
+MLOC_NODISCARD static bool At(const Parser* p, int c)
 {
     return p->at < p->end && p->text[p->at] == (uint8_t)c;
 }
 
-static bool Expect(Parser* p, int c)
+MLOC_NODISCARD static bool Expect(Parser* p, int c)
 {
     if (!At(p, c))
     {
@@ -68,7 +68,7 @@ static uint32_t Peek(const Parser* p, size_t* sizeOut)
 
 // Skips optional whitespace (o): spaces and bidi marks. Returns whether a
 // space was among them, which makes it required whitespace (s).
-static bool SkipSpace(Parser* p)
+MLOC_NODISCARD static bool SkipSpace(Parser* p)
 {
     bool space = false;
     for (;;)
@@ -89,7 +89,7 @@ static bool SkipSpace(Parser* p)
 
 // name = [bidi] name-start *name-char [bidi]: sets the name's bytes,
 // without the marks; a name whose NFC form is no name is refused.
-static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
+MLOC_NODISCARD static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
 {
     size_t size;
     uint32_t c = Peek(p, &size);
@@ -124,7 +124,7 @@ static bool ParseName(Parser* p, size_t* startOut, size_t* lengthOut)
     return true;
 }
 
-static bool EmitName(Parser* p, size_t start, size_t length)
+MLOC_NODISCARD static bool EmitName(Parser* p, size_t start, size_t length)
 {
     if (!mlocEmitNfc(p->emit, p->text + start, length))
     {
@@ -135,7 +135,7 @@ static bool EmitName(Parser* p, size_t start, size_t length)
 }
 
 // identifier = [namespace ":"] name, written to the pool in NFC.
-static bool ParseIdentifier(Parser* p, MessageString* out)
+MLOC_NODISCARD static bool ParseIdentifier(Parser* p, MessageString* out)
 {
     size_t start = 0;
     size_t length = 0;
@@ -158,7 +158,7 @@ static bool ParseIdentifier(Parser* p, MessageString* out)
 }
 
 // variable = "$" name: its index.
-static bool ParseVariable(Parser* p, uint32_t* indexOut)
+MLOC_NODISCARD static bool ParseVariable(Parser* p, uint32_t* indexOut)
 {
     size_t start = 0;
     size_t length = 0;
@@ -174,7 +174,7 @@ static bool ParseVariable(Parser* p, uint32_t* indexOut)
     return true;
 }
 
-static bool Flush(Parser* p, size_t from, bool nfc)
+MLOC_NODISCARD static bool Flush(Parser* p, size_t from, bool nfc)
 {
     if (nfc)
     {
@@ -189,13 +189,13 @@ static bool Flush(Parser* p, size_t from, bool nfc)
     return true;
 }
 
-static bool IsEscapable(uint8_t b)
+MLOC_NODISCARD static bool IsEscapable(uint8_t b)
 {
     return b == '\\' || b == messageOpenBrace || b == '|' || b == messageCloseBrace;
 }
 
 // The rest of a quoted literal after its "|", unescaped.
-static bool ParseQuoted(Parser* p, bool nfc)
+MLOC_NODISCARD static bool ParseQuoted(Parser* p, bool nfc)
 {
     size_t from = p->at;
     for (;;)
@@ -231,7 +231,7 @@ static bool ParseQuoted(Parser* p, bool nfc)
 }
 
 // literal = quoted-literal / unquoted-literal, its value to the pool.
-static bool ParseLiteral(Parser* p, bool nfc, MessageString* out)
+MLOC_NODISCARD static bool ParseLiteral(Parser* p, bool nfc, MessageString* out)
 {
     MessageString string = mlocEmitBeginString(p->emit);
     if (At(p, '|'))
@@ -263,26 +263,26 @@ static bool ParseLiteral(Parser* p, bool nfc, MessageString* out)
     return true;
 }
 
-static bool StartsLiteral(const Parser* p)
+MLOC_NODISCARD static bool StartsLiteral(const Parser* p)
 {
     size_t size;
     return At(p, '|') || mlocMessageIsNameChar(Peek(p, &size));
 }
 
 // option = identifier o "=" o (literal / variable).
-static bool ParseOption(Parser* p)
+MLOC_NODISCARD static bool ParseOption(Parser* p)
 {
     MessageString name;
     if (!ParseIdentifier(p, &name))
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     if (!Expect(p, '='))
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     uint32_t fields[5] = {parameterOptionLiteral, name.offset, name.length, 0, 0};
     if (At(p, '$'))
     {
@@ -307,7 +307,7 @@ static bool ParseOption(Parser* p)
 }
 
 // *(s option): sets whether whitespace ends them, which attributes need.
-static bool ParseOptions(Parser* p, bool* spaceOut)
+MLOC_NODISCARD static bool ParseOptions(Parser* p, bool* spaceOut)
 {
     for (;;)
     {
@@ -327,7 +327,7 @@ static bool ParseOptions(Parser* p, bool* spaceOut)
 
 // *(s attribute), attribute = "@" identifier [o "=" o literal]; ends
 // after the whitespace that follows.
-static bool ParseAttributes(Parser* p, bool space)
+MLOC_NODISCARD static bool ParseAttributes(Parser* p, bool space)
 {
     while (space && At(p, '@'))
     {
@@ -339,11 +339,11 @@ static bool ParseAttributes(Parser* p, bool space)
         }
         uint32_t fields[5] = {parameterAttribute, name.offset, name.length, 0, 0};
         size_t back = p->at;
-        SkipSpace(p);
+        (void)SkipSpace(p);
         if (At(p, '='))
         {
             p->at++;
-            SkipSpace(p);
+            (void)SkipSpace(p);
             MessageString value;
             if (!ParseLiteral(p, false, &value))
             {
@@ -365,7 +365,7 @@ static bool ParseAttributes(Parser* p, bool space)
 
 // An expression's operand: a variable, a literal, or none before a
 // function.
-static bool ParseOperand(Parser* p, uint32_t* fields)
+MLOC_NODISCARD static bool ParseOperand(Parser* p, uint32_t* fields)
 {
     if (At(p, '$'))
     {
@@ -394,7 +394,8 @@ static bool ParseOperand(Parser* p, uint32_t* fields)
 
 // The rest of an expression after its "{" at source: its fields (the
 // record's eight) and its index.
-static bool ParseExpression(Parser* p, size_t source, uint32_t* fields, uint32_t* indexOut)
+MLOC_NODISCARD static bool ParseExpression(Parser* p, size_t source, uint32_t* fields,
+                                           uint32_t* indexOut)
 {
     memset(fields, 0, 8 * sizeof *fields);
     fields[5] = p->emit->used[messageParameters];
@@ -425,7 +426,7 @@ static bool ParseExpression(Parser* p, size_t source, uint32_t* fields, uint32_t
 }
 
 // The rest of a markup after its "{" and the spaces after it.
-static bool ParseMarkup(Parser* p, size_t source, uint32_t* indexOut)
+MLOC_NODISCARD static bool ParseMarkup(Parser* p, size_t source, uint32_t* indexOut)
 {
     uint32_t fields[6] = {At(p, '#') ? markupOpen : markupClose};
     p->at++;
@@ -454,11 +455,11 @@ static bool ParseMarkup(Parser* p, size_t source, uint32_t* indexOut)
 }
 
 // placeholder = expression / markup, after its "{": emits its piece.
-static bool ParsePlaceholder(Parser* p)
+MLOC_NODISCARD static bool ParsePlaceholder(Parser* p)
 {
     MLOC_ASSERT(p->at >= 1 && p->text[p->at - 1] == messageOpenBrace);
     size_t source = p->at - 1;
-    SkipSpace(p);
+    (void)SkipSpace(p);
     uint32_t piece[3] = {pieceExpression, 0, 0};
     bool parsed;
     if (At(p, '#') || At(p, '/'))
@@ -507,7 +508,7 @@ static void ParseTextRun(Parser* p)
 
 // pattern, to the end of the text or, quoted, to its "}}": its pieces'
 // first index and count.
-static bool ParsePattern(Parser* p, bool quoted, uint32_t* pieces)
+MLOC_NODISCARD static bool ParsePattern(Parser* p, bool quoted, uint32_t* pieces)
 {
     pieces[0] = p->emit->used[messagePieces];
     MessageString text = mlocEmitBeginString(p->emit);
@@ -563,14 +564,14 @@ static bool ParsePattern(Parser* p, bool quoted, uint32_t* pieces)
     return true;
 }
 
-static bool StartsQuotedPattern(const Parser* p)
+MLOC_NODISCARD static bool StartsQuotedPattern(const Parser* p)
 {
     return p->at + 1 < p->end && p->text[p->at] == messageOpenBrace &&
            p->text[p->at + 1] == messageOpenBrace;
 }
 
 // A variant's keys, up to its quoted pattern: whether all are "*".
-static bool ParseKeys(Parser* p, uint32_t selectors, size_t start, bool* catchAllOut)
+MLOC_NODISCARD static bool ParseKeys(Parser* p, uint32_t selectors, size_t start, bool* catchAllOut)
 {
     uint32_t keys = 0;
     bool catchAll = true;
@@ -613,7 +614,7 @@ static bool ParseKeys(Parser* p, uint32_t selectors, size_t start, bool* catchAl
 
 // The selectors after ".match", each after required whitespace; ends
 // after the whitespace before the first variant.
-static bool ParseSelectors(Parser* p, uint32_t* countOut)
+MLOC_NODISCARD static bool ParseSelectors(Parser* p, uint32_t* countOut)
 {
     uint32_t count = 0;
     for (;;)
@@ -644,7 +645,7 @@ static bool ParseSelectors(Parser* p, uint32_t* countOut)
 }
 
 // matcher, after ".match": the selectors, then the variants to the end.
-static bool ParseMatcher(Parser* p)
+MLOC_NODISCARD static bool ParseMatcher(Parser* p)
 {
     MLOC_ASSERT(p->at >= 6 && memcmp(p->text + p->at - 6, ".match", 6) == 0);
     size_t start = p->at - 6;
@@ -669,7 +670,7 @@ static bool ParseMatcher(Parser* p)
         }
         mlocEmitRecord(p->emit, messageVariants, variant);
         fallback = fallback || catchAll;
-        SkipSpace(p);
+        (void)SkipSpace(p);
     }
     if (!fallback)
     {
@@ -678,7 +679,7 @@ static bool ParseMatcher(Parser* p)
     return true;
 }
 
-static bool Keyword(Parser* p, const char* word)
+MLOC_NODISCARD static bool Keyword(Parser* p, const char* word)
 {
     size_t length = strlen(word);
     if (p->end - p->at < length || memcmp(p->text + p->at, word, length) != 0)
@@ -690,7 +691,7 @@ static bool Keyword(Parser* p, const char* word)
 }
 
 // local-declaration after ".local": s variable o "=" o expression.
-static bool ParseLocal(Parser* p)
+MLOC_NODISCARD static bool ParseLocal(Parser* p)
 {
     uint32_t fields[3] = {declarationLocal, 0, 0};
     if (!SkipSpace(p))
@@ -701,18 +702,18 @@ static bool ParseLocal(Parser* p)
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     if (!Expect(p, '='))
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     size_t source = p->at;
     if (!Expect(p, messageOpenBrace))
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     uint32_t expression[8];
     if (!ParseExpression(p, source, expression, &fields[2]))
     {
@@ -723,16 +724,16 @@ static bool ParseLocal(Parser* p)
 }
 
 // input-declaration after ".input": o variable-expression.
-static bool ParseInput(Parser* p)
+MLOC_NODISCARD static bool ParseInput(Parser* p)
 {
     uint32_t fields[3] = {declarationInput, 0, 0};
-    SkipSpace(p);
+    (void)SkipSpace(p);
     size_t source = p->at;
     if (!Expect(p, messageOpenBrace))
     {
         return false;
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     if (!At(p, '$'))
     {
         return Fail(p);
@@ -748,11 +749,11 @@ static bool ParseInput(Parser* p)
 }
 
 // complex-message: declarations, then a quoted pattern or a matcher.
-static bool ParseComplex(Parser* p)
+MLOC_NODISCARD static bool ParseComplex(Parser* p)
 {
     for (;;)
     {
-        SkipSpace(p);
+        (void)SkipSpace(p);
         bool parsed;
         if (StartsQuotedPattern(p))
         {
@@ -785,7 +786,7 @@ static bool ParseComplex(Parser* p)
             return false;
         }
     }
-    SkipSpace(p);
+    (void)SkipSpace(p);
     return p->at == p->end || Fail(p);
 }
 
@@ -795,7 +796,7 @@ MessageParse mlocParseMessage(const uint8_t* text, size_t length, MessageEmit* e
     MLOC_ASSERT(length <= MLOC_MAX_MESSAGE_TEXT);
     Parser p = {text, length, 0, emit, SIZE_MAX, mloc_messageErrorNone, 0};
     MessageParse result = {mloc_messageErrorNone, 0, 0};
-    SkipSpace(&p);
+    (void)SkipSpace(&p);
     bool complex = At(&p, '.') || StartsQuotedPattern(&p);
     bool parsed;
     if (complex)

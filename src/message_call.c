@@ -10,7 +10,7 @@
 #include <string.h>
 
 // The call a function's entry received, or false.
-static bool ReadCall(const mlocMessageCall* call, CallState* out)
+MLOC_NODISCARD static bool ReadCall(const mlocMessageCall* call, CallState* out)
 {
     if (call == NULL)
     {

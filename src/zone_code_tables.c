@@ -91,7 +91,8 @@ static int Order(const uint8_t* a, size_t aLength, const char* b, size_t bLength
 
 // Whether a name lies in the text and is printable ASCII, spaces allowed
 // or not.
-static bool InText(const ZoneCodeTables* t, uint32_t offset, uint32_t length, bool spaces)
+MLOC_NODISCARD static bool InText(const ZoneCodeTables* t, uint32_t offset, uint32_t length,
+                                  bool spaces)
 {
     if (length == 0 || (uint64_t)offset + length > t->textSize)
     {
@@ -108,7 +109,7 @@ static bool InText(const ZoneCodeTables* t, uint32_t offset, uint32_t length, bo
     return true;
 }
 
-static bool ValidId(const ZoneCodeTables* t, const ZoneCode* c)
+MLOC_NODISCARD static bool ValidId(const ZoneCodeTables* t, const ZoneCode* c)
 {
     if (c->idLength < 2 || c->idLength > 8 || !InText(t, c->id, c->idLength, false))
     {
@@ -125,7 +126,7 @@ static bool ValidId(const ZoneCodeTables* t, const ZoneCode* c)
     return true;
 }
 
-static bool ValidCode(const ZoneCodeTables* t, uint32_t code)
+MLOC_NODISCARD static bool ValidCode(const ZoneCodeTables* t, uint32_t code)
 {
     ZoneCode c = mlocZoneCode(t, code);
     if (!ValidId(t, &c) || mlocLoad16(t->codes + (size_t)code * zoneCodeSize + 14) != 0)
@@ -153,8 +154,8 @@ static bool ValidCode(const ZoneCodeTables* t, uint32_t code)
 
 // An alias or a Windows name: a name in order, a zero byte, and its
 // 16-bit field below a limit.
-static bool ValidEntry(const ZoneCodeTables* t, const uint8_t* entries, uint32_t index, bool spaces,
-                       uint32_t limit)
+MLOC_NODISCARD static bool ValidEntry(const ZoneCodeTables* t, const uint8_t* entries,
+                                      uint32_t index, bool spaces, uint32_t limit)
 {
     const uint8_t* p = entries + (size_t)index * 8;
     if (p[5] != 0 || mlocLoad16(p + 6) >= limit || !InText(t, mlocLoad32(p), p[4], spaces))
@@ -170,7 +171,7 @@ static bool ValidEntry(const ZoneCodeTables* t, const uint8_t* entries, uint32_t
                  p[4]) < 0;
 }
 
-static bool ValidRegion(const uint8_t* r)
+MLOC_NODISCARD static bool ValidRegion(const uint8_t* r)
 {
     if (r[0] == '0' && r[1] == '0' && r[2] == '1')
     {
@@ -180,7 +181,7 @@ static bool ValidRegion(const uint8_t* r)
 }
 
 // A Windows name's mappings: in order of their regions, one for 001.
-static bool ValidMappings(const ZoneCodeTables* t, uint32_t first, uint32_t end)
+MLOC_NODISCARD static bool ValidMappings(const ZoneCodeTables* t, uint32_t first, uint32_t end)
 {
     bool world = false;
     for (uint32_t m = first; m < end; m++)

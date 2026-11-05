@@ -79,7 +79,7 @@ static Local Possible(const mlocTimeZone* zone, const ZoneTables* t, bool named,
 
 // The instants found as mlocInstant values, false when either end lies
 // outside Temporal's range (ECMA-262 refuses the whole list then).
-static bool Instants(const Local* r, uint32_t nanosecond, mlocPossibleInstants* out)
+MLOC_NODISCARD static bool Instants(const Local* r, uint32_t nanosecond, mlocPossibleInstants* out)
 {
     mlocPossibleInstants p = {.count = r->count};
     if (r->count > 0)

@@ -19,18 +19,18 @@ enum
     maxOffsetMinutes = 18 * 60,
 };
 
-static bool ValidRegion(const uint8_t* region, bool none)
+MLOC_NODISCARD static bool ValidRegion(const uint8_t* region, bool none)
 {
     bool letters = region[0] >= 'A' && region[0] <= 'Z' && region[1] >= 'A' && region[1] <= 'Z';
     return letters || (none && region[0] == 0 && region[1] == 0);
 }
 
-static bool ValidOffset(int32_t minutes)
+MLOC_NODISCARD static bool ValidOffset(int32_t minutes)
 {
     return minutes >= -maxOffsetMinutes && minutes <= maxOffsetMinutes;
 }
 
-static bool ValidPeriod(const uint8_t* p, uint32_t metazoneCount)
+MLOC_NODISCARD static bool ValidPeriod(const uint8_t* p, uint32_t metazoneCount)
 {
     int64_t from = (int64_t)mlocLoad64(p);
     int64_t to = (int64_t)mlocLoad64(p + 8);
@@ -43,8 +43,9 @@ static bool ValidPeriod(const uint8_t* p, uint32_t metazoneCount)
 }
 
 // Each code's region, flags and periods, ascending without overlap.
-static bool ValidCodes(const uint8_t* codes, uint32_t codeCount, const uint8_t* periods,
-                       uint32_t periodCount, uint32_t metazoneCount)
+MLOC_NODISCARD static bool ValidCodes(const uint8_t* codes, uint32_t codeCount,
+                                      const uint8_t* periods, uint32_t periodCount,
+                                      uint32_t metazoneCount)
 {
     for (uint32_t i = 0; i < codeCount; i++)
     {
@@ -70,8 +71,9 @@ static bool ValidCodes(const uint8_t* codes, uint32_t codeCount, const uint8_t* 
 }
 
 // Each metazone's golden zone and preferred zones, ascending by region.
-static bool ValidMetazones(const uint8_t* metazones, uint32_t metazoneCount,
-                           const uint8_t* preferred, uint32_t preferredCount, uint32_t codeCount)
+MLOC_NODISCARD static bool ValidMetazones(const uint8_t* metazones, uint32_t metazoneCount,
+                                          const uint8_t* preferred, uint32_t preferredCount,
+                                          uint32_t codeCount)
 {
     for (uint32_t i = 0; i < metazoneCount; i++)
     {
@@ -125,7 +127,7 @@ bool mlocValidZoneMeta(const DataView* view, DataSpan payload)
 }
 
 // Whether a key names an item's field the layout has.
-static bool ValidKey(uint32_t key)
+MLOC_NODISCARD static bool ValidKey(uint32_t key)
 {
     uint32_t item = key / zoneNameFieldsPerItem;
     uint32_t field = key % zoneNameFieldsPerItem;
@@ -144,7 +146,7 @@ static bool ValidKey(uint32_t key)
 
 // Whether a format the formatter takes apart holds its parts: the GMT
 // format its {0}, an hour format an H before its first mm.
-static bool ValidFormat(uint32_t key, const uint8_t* text, uint32_t length)
+MLOC_NODISCARD static bool ValidFormat(uint32_t key, const uint8_t* text, uint32_t length)
 {
     uint32_t field = key - zoneNameFormats * zoneNameFieldsPerItem;
     bool hour = field == zoneFormatHourPositive || field == zoneFormatHourNegative;

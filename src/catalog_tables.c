@@ -12,7 +12,7 @@
 #include <string.h>
 
 // Whether count + 1 offsets rise from 0 and end within size.
-static bool RisingOffsets(const uint8_t* offsets, uint32_t count, uint32_t size)
+MLOC_NODISCARD static bool RisingOffsets(const uint8_t* offsets, uint32_t count, uint32_t size)
 {
     uint32_t previous = 0;
     if (mlocLoad32(offsets) != 0)

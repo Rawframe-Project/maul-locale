@@ -14,13 +14,13 @@ enum
     maxSignificantDigits = 21,
 };
 
-static bool UsesFraction(mlocPrecisionKind kind)
+MLOC_NODISCARD static bool UsesFraction(mlocPrecisionKind kind)
 {
     return kind == mloc_precisionFraction || kind == mloc_precisionMorePrecision ||
            kind == mloc_precisionLessPrecision;
 }
 
-static bool UsesSignificant(mlocPrecisionKind kind)
+MLOC_NODISCARD static bool UsesSignificant(mlocPrecisionKind kind)
 {
     return kind == mloc_precisionSignificant || kind == mloc_precisionMorePrecision ||
            kind == mloc_precisionLessPrecision;
@@ -28,7 +28,7 @@ static bool UsesSignificant(mlocPrecisionKind kind)
 
 // An ECMA-402 increment as a mlocRoundDecimal increment (1, 2, 5 or 25)
 // times a power of ten; false for another.
-static bool SplitIncrement(uint32_t increment, uint32_t* unitOut, int32_t* powerOut)
+MLOC_NODISCARD static bool SplitIncrement(uint32_t increment, uint32_t* unitOut, int32_t* powerOut)
 {
     int32_t power = 0;
     while (increment >= 10 && increment % 10 == 0)

@@ -49,8 +49,8 @@ static int64_t CodeOrder(uint32_t number, bool leap)
 // NonISODateSurpasses with years alone: whether the first date with
 // years added (a date that need not exist) passes the second, whose year
 // is target.
-static bool Surpasses(int sign, const Parts* one, const Parts* two, const CalendarYear* target,
-                      int64_t years)
+MLOC_NODISCARD static bool Surpasses(int sign, const Parts* one, const Parts* two,
+                                     const CalendarYear* target, int64_t years)
 {
     int64_t y0 = one->year + years;
     // CompareSurpasses on the year and the month code. Equal codes leave

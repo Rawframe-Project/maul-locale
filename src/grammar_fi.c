@@ -99,7 +99,7 @@ static const FinnishType s_types[50] = {
 // The types whose nominative ends in a consonant: gradation strengthens
 // their vowel stem (rengas, renkaan); not type 40, whose -uus grades its
 // vowel stem as a vowel-final word does (kalleuden, kalleuteen).
-static bool IsInverse(int type)
+MLOC_NODISCARD static bool IsInverse(int type)
 {
     return type >= 32 && type != 40;
 }
@@ -115,8 +115,9 @@ typedef struct Kind
 
 // Finds a key in a table blob of records (length, bytes, type, grade),
 // among those that begin with its first byte.
-static bool Find(const uint8_t* blob, const uint16_t* offsets, const uint16_t* starts,
-                 const uint8_t* key, size_t length, Kind* out)
+MLOC_NODISCARD static bool Find(const uint8_t* blob, const uint16_t* offsets,
+                                const uint16_t* starts, const uint8_t* key, size_t length,
+                                Kind* out)
 {
     if (length == 0)
     {
@@ -166,7 +167,7 @@ typedef struct KeyText
 } KeyText;
 
 // Encodes a word's small letters; false for a letter UTF-8 cannot hold.
-static bool MakeKeyText(const FinnishWord* w, KeyText* out)
+MLOC_NODISCARD static bool MakeKeyText(const FinnishWord* w, KeyText* out)
 {
     size_t n = 0;
     for (size_t i = 0; i < w->count; i++)
@@ -186,7 +187,7 @@ static bool MakeKeyText(const FinnishWord* w, KeyText* out)
 
 // A common noun's kind by Kotus: the word, a compound's last word of
 // three letters or more after two or more, else the longest ending.
-static bool EndsWith(const FinnishWord* w, const char* s);
+MLOC_NODISCARD static bool EndsWith(const FinnishWord* w, const char* s);
 static Kind NameKind(const FinnishWord* w);
 
 static Kind CommonKind(const FinnishWord* w)
@@ -223,7 +224,7 @@ static Kind CommonKind(const FinnishWord* w)
 }
 
 // Whether the letters before end are the ASCII string s.
-static bool EndsWith(const FinnishWord* w, const char* s)
+MLOC_NODISCARD static bool EndsWith(const FinnishWord* w, const char* s)
 {
     size_t n = strlen(s);
     if (w->count < n)
@@ -783,8 +784,8 @@ static void SaidEndings(const FinnishWord* spoken, const Numeral* numeral, mlocG
     }
 }
 
-static bool MarkedEndings(const FinnishText* t, const FinnishWord* spoken, mlocGrammaticalCase c,
-                          FinnishWord* out)
+MLOC_NODISCARD static bool MarkedEndings(const FinnishText* t, const FinnishWord* spoken,
+                                         mlocGrammaticalCase c, FinnishWord* out)
 {
     const Numeral* numeral = t->number && !t->ordinal ? NumeralOf(spoken) : nullptr;
     if (t->number && !t->ordinal && numeral == nullptr)
@@ -845,7 +846,7 @@ static uint8_t Encode(const FinnishWord* w, size_t from, size_t to, char* buffer
     return (uint8_t)n;
 }
 
-static bool HasVowel(const FinnishWord* w)
+MLOC_NODISCARD static bool HasVowel(const FinnishWord* w)
 {
     for (size_t i = 0; i < w->count; i++)
     {
@@ -858,8 +859,8 @@ static bool HasVowel(const FinnishWord* w)
 }
 
 // Digits, capitals, a period or a closing mark: a colon and the endings.
-static bool InflectMarked(const FinnishText* t, const FinnishWord* spoken, const mlocInflection* r,
-                          FinnishForm* out)
+MLOC_NODISCARD static bool InflectMarked(const FinnishText* t, const FinnishWord* spoken,
+                                         const mlocInflection* r, FinnishForm* out)
 {
     mlocGrammaticalCase c = r->grammaticalCase;
     if (r->plural || r->possessorPerson > 0 || c == mloc_caseInstrumental ||

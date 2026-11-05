@@ -48,7 +48,7 @@ typedef struct MatchTable
 MLOC_NODISCARD bool mlocValidMatch(const DataView* view, DataSpan payload);
 
 // The first source's matching table, or false.
-bool mlocOpenMatchTable(const mlocDataSet* data, MatchTable* tableOut);
+MLOC_NODISCARD bool mlocOpenMatchTable(const mlocDataSet* data, MatchTable* tableOut);
 
 typedef struct Matcher
 {
@@ -79,7 +79,8 @@ int32_t mlocNearest(const Matcher* matcher, const Wanted* wanted, const void* ls
                     const mlocLocale* locales, uint32_t shiftedThreshold, uint32_t* shiftedOut);
 
 // Whether two LSRs are equivalent: the same language, script and region.
-bool mlocSameLsr(const Lsr* a, const mlocLocale* aLocale, const Lsr* b, const mlocLocale* bLocale);
+MLOC_NODISCARD bool mlocSameLsr(const Lsr* a, const mlocLocale* aLocale, const Lsr* b,
+                                const mlocLocale* bLocale);
 
 // The demotion of each further desired locale: the distance of en-US and
 // en-GB.

@@ -59,22 +59,22 @@ mlocResult mlocConvertScaled(const UnitTable* t, const UnitScale* from, const Un
                              const mlocDecimal* value, mlocDecimal* out, bool* exactOut);
 
 // A finite or infinite decimal's value; false when its digits do not fit.
-bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out);
+MLOC_NODISCARD bool mlocUnitValueOf(const mlocDecimal* d, UnitValue* out);
 
 // A value in a scale's unit to its base unit, and back; false when the
 // integers cannot hold it.
-bool mlocUnitValueToBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
-bool mlocUnitValueFromBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
+MLOC_NODISCARD bool mlocUnitValueToBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
+MLOC_NODISCARD bool mlocUnitValueFromBase(const UnitTable* t, const UnitScale* scale, UnitValue* x);
 
 // x = 1 / x: zero gives an infinity and an infinity zero.
 void mlocInvertUnitValue(UnitValue* x);
 
 // Whether |x| is at least n / d (d not zero).
-bool mlocUnitValueAtLeast(const UnitValue* x, const Wide* n, const Wide* d);
+MLOC_NODISCARD bool mlocUnitValueAtLeast(const UnitValue* x, const Wide* n, const Wide* d);
 
 // Takes the integer part of a finite |x| out: *integerOut receives it and
 // x keeps the rest, positive. False when the power cannot be folded in.
-bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut);
+MLOC_NODISCARD bool mlocSplitUnitValue(UnitValue* x, Wide* integerOut);
 
 // An integer's value.
 UnitValue mlocUnitValueOfInteger(const Wide* integer);

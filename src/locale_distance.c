@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-static bool ReadTable(DataSpan span, MatchTable* t)
+MLOC_NODISCARD static bool ReadTable(DataSpan span, MatchTable* t)
 {
     if (span.size < matchHeaderSize)
     {
@@ -61,7 +61,7 @@ static uint32_t RegionKey(const MatchTable* t, uint32_t i)
 }
 
 // A run of region pairs: sorted, unique, "*" first, in bounds.
-static bool ValidRegionRun(const MatchTable* t, uint32_t start, uint32_t count)
+MLOC_NODISCARD static bool ValidRegionRun(const MatchTable* t, uint32_t start, uint32_t count)
 {
     if ((uint64_t)start + count > t->regionCount)
     {
@@ -77,7 +77,7 @@ static bool ValidRegionRun(const MatchTable* t, uint32_t start, uint32_t count)
     return true;
 }
 
-static bool ValidEntries(const MatchTable* t)
+MLOC_NODISCARD static bool ValidEntries(const MatchTable* t)
 {
     for (uint32_t i = 0; i < t->regionCount; i++)
     {
@@ -129,7 +129,7 @@ static bool ValidEntries(const MatchTable* t)
 
 // The language pairs: sorted, unique, valid, each leading to a valid
 // run of script pairs (sorted, unique, "*" first) or of region pairs.
-static bool ValidLanguages(const MatchTable* t)
+MLOC_NODISCARD static bool ValidLanguages(const MatchTable* t)
 {
     for (uint32_t i = 0; i < t->languageCount; i++)
     {
@@ -228,8 +228,8 @@ void mlocWant(const Matcher* matcher, const Lsr* lsr, const mlocLocale* locale, 
     }
 }
 
-static bool SameLanguage(const Lsr* a, const mlocLocale* aLocale, const Lsr* b,
-                         const mlocLocale* bLocale)
+MLOC_NODISCARD static bool SameLanguage(const Lsr* a, const mlocLocale* aLocale, const Lsr* b,
+                                        const mlocLocale* bLocale)
 {
     if (a->kind != b->kind)
     {
@@ -245,7 +245,7 @@ static uint32_t ScriptKind(const Lsr* lsr)
     return lsr->kind == lsrPrivate ? lsrNormal : lsr->kind;
 }
 
-static bool SameScript(const Lsr* a, const Lsr* b)
+MLOC_NODISCARD static bool SameScript(const Lsr* a, const Lsr* b)
 {
     return ScriptKind(a) == ScriptKind(b) && a->script == b->script;
 }
@@ -441,8 +441,8 @@ static uint32_t Distance(const Matcher* m, const Wanted* w, const Lsr* s, const 
 }
 
 // ICU's isMatch: whether the pair also matches the other way.
-static bool Reverse(const Matcher* m, const Wanted* w, const Lsr* s, const mlocLocale* sLocale,
-                    uint32_t shiftedThreshold)
+MLOC_NODISCARD static bool Reverse(const Matcher* m, const Wanted* w, const Lsr* s,
+                                   const mlocLocale* sLocale, uint32_t shiftedThreshold)
 {
     Matcher oneWay = *m;
     oneWay.bothWays = false;
@@ -458,8 +458,9 @@ static bool Reverse(const Matcher* m, const Wanted* w, const Lsr* s, const mlocL
 // ICU's compareLikely: whether a candidate as near as the best has its
 // language's likely script (when the scripts differ) or region (when
 // only the regions do).
-static bool MoreLikely(const Matcher* m, const Lsr* candidate, const mlocLocale* cLocale,
-                       const Lsr* best, const mlocLocale* bLocale)
+MLOC_NODISCARD static bool MoreLikely(const Matcher* m, const Lsr* candidate,
+                                      const mlocLocale* cLocale, const Lsr* best,
+                                      const mlocLocale* bLocale)
 {
     uint32_t script = 0;
     uint32_t region = 0;
@@ -484,7 +485,7 @@ static Lsr LsrAt(const void* lsrs, uint32_t i)
 
 // Whether an entry read from the caller's list holds: only its index
 // and region reach into arrays.
-static bool ValidLsr(const Lsr* s, uint32_t count)
+MLOC_NODISCARD static bool ValidLsr(const Lsr* s, uint32_t count)
 {
     return s->index < count && s->kind <= lsrPrivate && s->flags <= lsrExplicit &&
            s->region < matchRegionSlots;
@@ -493,7 +494,8 @@ static bool ValidLsr(const Lsr* s, uint32_t count)
 // Whether a supported LSR is surely past the limit: most pairs are of
 // two languages the table has no pair for, at the default language
 // distance, which most limits pass.
-static bool SurelyFar(const Matcher* matcher, const Wanted* wanted, const Lsr* s, uint32_t limit)
+MLOC_NODISCARD static bool SurelyFar(const Matcher* matcher, const Wanted* wanted, const Lsr* s,
+                                     uint32_t limit)
 {
     bool star = wanted->end == wanted->start || s->packedLanguage == 0;
     bool other = s->kind != wanted->lsr.kind ||

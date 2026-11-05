@@ -9,6 +9,8 @@
 #ifndef MLOC_BINARY64_H
 #define MLOC_BINARY64_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -31,11 +33,11 @@ Wide mlocWideScaled(Wide a, uint64_t factor);
 uint64_t mlocWideQuotient(Wide n, Wide d, Wide* remainderOut);
 
 // Whether a below b.
-bool mlocWideBelow(Wide a, Wide b);
+MLOC_NODISCARD bool mlocWideBelow(Wide a, Wide b);
 
 // A double's value as a sign and a magnitude, when it is a finite integer
 // below 2^128.
-bool mlocWideOfDouble(double value, bool* negativeOut, Wide* magnitudeOut);
+MLOC_NODISCARD bool mlocWideOfDouble(double value, bool* negativeOut, Wide* magnitudeOut);
 
 // The binary64 nearest numerator / denominator, negated when negative;
 // +0 for a zero numerator. The denominator is positive and below 2^74,

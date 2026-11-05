@@ -76,8 +76,8 @@ static const char* AzerbaijaniLetterName(uint32_t c)
 // A final k or q after a vowel, in a word of two syllables or more, is
 // written y or ğ before a vowel. No dictionary of the words that keep
 // it is free to use.
-static bool AzerbaijaniStem(const uint8_t* word, size_t length, uint8_t marks,
-                            TurkicSuffixes* suffixes, TurkicStem* out)
+MLOC_NODISCARD static bool AzerbaijaniStem(const uint8_t* word, size_t length, uint8_t marks,
+                                           TurkicSuffixes* suffixes, TurkicStem* out)
 {
     (void)marks;
     if (!suffixes->vowelFirst)

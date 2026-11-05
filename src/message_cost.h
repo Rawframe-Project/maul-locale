@@ -23,7 +23,7 @@
 static const uint32_t messageUnbound = UINT32_MAX;
 
 // Whether a message's counts (one per record kind) are within the bounds.
-bool mlocMessageCountsFit(const uint32_t* count);
+MLOC_NODISCARD bool mlocMessageCountsFit(const uint32_t* count);
 
 // The words a message's costs take.
 uint64_t mlocMessageCostWords(const MessageView* view);

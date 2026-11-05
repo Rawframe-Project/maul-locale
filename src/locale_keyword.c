@@ -88,7 +88,8 @@ static size_t FieldLength(const char* field, size_t size)
 
 // Appends a hyphen (unless first) and text to a tag being built; false
 // when it does not fit.
-static bool Append(char* text, size_t capacity, size_t* length, const char* part, size_t size)
+MLOC_NODISCARD static bool Append(char* text, size_t capacity, size_t* length, const char* part,
+                                  size_t size)
 {
     size_t hyphen = *length > 0;
     if (*length + hyphen + size >= capacity)
@@ -102,7 +103,8 @@ static bool Append(char* text, size_t capacity, size_t* length, const char* part
 }
 
 // Appends a locale's language, script and region.
-static bool AppendHead(const mlocLocale* locale, char* text, size_t capacity, size_t* length)
+MLOC_NODISCARD static bool AppendHead(const mlocLocale* locale, char* text, size_t capacity,
+                                      size_t* length)
 {
     return Append(text, capacity, length, locale->language, FieldLength(locale->language, 8)) &&
            (locale->script[0] == '\0' || Append(text, capacity, length, locale->script, 4)) &&
@@ -112,8 +114,8 @@ static bool AppendHead(const mlocLocale* locale, char* text, size_t capacity, si
 
 // Appends a key and its value at the end of the u extension, or as a new
 // u extension.
-static bool AddKeyword(char* text, size_t capacity, size_t* length, bool inU, const char* keyword,
-                       size_t keywordLength)
+MLOC_NODISCARD static bool AddKeyword(char* text, size_t capacity, size_t* length, bool inU,
+                                      const char* keyword, size_t keywordLength)
 {
     return (inU || Append(text, capacity, length, "u", 1)) &&
            Append(text, capacity, length, keyword, keywordLength);
@@ -163,7 +165,8 @@ static void BeginExtension(Rewriting* r, char singleton)
 // added again as keyword ("ca-gregory") at the end of the u extension (or
 // as a new one before private use): parsing puts keys and extensions in
 // order again. A u extension left empty is left out.
-static bool Rewrite(mlocLocale* locale, const char* key, const char* keyword, size_t keywordLength)
+MLOC_NODISCARD static bool Rewrite(mlocLocale* locale, const char* key, const char* keyword,
+                                   size_t keywordLength)
 {
     // A key of two letters, a constant of each caller: two bytes of it
     // are compared and copied.

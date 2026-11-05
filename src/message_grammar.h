@@ -62,9 +62,9 @@ typedef struct GenderValue
 // Reads a list of persons' genders ("male", "female", "other" items, or
 // one such text when items is null) and the gender of the list in a
 // locale; false for another item or a list the call refuses.
-bool mlocMakeGenderValue(const mlocListItem* items, size_t count, const uint8_t* text,
-                         size_t length, const mlocDataSet* data, const mlocLocale* locale,
-                         GenderValue* out);
+MLOC_NODISCARD bool mlocMakeGenderValue(const mlocListItem* items, size_t count,
+                                        const uint8_t* text, size_t length, const mlocDataSet* data,
+                                        const mlocLocale* locale, GenderValue* out);
 
 // Whether a key matches a gender value: male, female or other as the
 // list's gender; mloc_messageFaultBadVariantKey for another key.
@@ -90,7 +90,8 @@ mlocMessageFaultKind mlocSetGrammarFrom(void* context, const uint8_t* name, size
                                         const NumberOption* option);
 
 // Prepares the locale's inflector; false when the locale has no rules.
-bool mlocPrepareGrammar(const mlocDataSet* data, const mlocLocale* locale, PreparedGrammar* out);
+MLOC_NODISCARD bool mlocPrepareGrammar(const mlocDataSet* data, const mlocLocale* locale,
+                                       PreparedGrammar* out);
 
 // Writes a value inflected, with the inflector prepared when prepared
 // (which may be null) has one, else one made here, and the number's own

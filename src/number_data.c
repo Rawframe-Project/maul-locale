@@ -46,7 +46,7 @@ static uint32_t CharLength(const uint8_t* text, uint32_t available)
 
 // Whether text is well-formed UTF-8 whose bytes below 0x20 are at most
 // the largest placeholder allowed (0 for none) and never NUL.
-static bool ValidText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder)
+MLOC_NODISCARD static bool ValidText(const uint8_t* text, uint32_t length, uint8_t maxPlaceholder)
 {
     for (uint32_t at = 0; at < length;)
     {
@@ -185,7 +185,7 @@ bool mlocValidNumberSymbols(const DataView* view, DataSpan payload)
     return true;
 }
 
-static bool ValidPattern(const uint8_t* p, uint32_t stringCount)
+MLOC_NODISCARD static bool ValidPattern(const uint8_t* p, uint32_t stringCount)
 {
     for (int a = 0; a < 4; a++)
     {
@@ -471,8 +471,8 @@ SparseTable mlocReadSparseTable(DataSpan unit)
 
 // Whether a row of a sparse unit, its length given, has a mask of the
 // unit's fields and their values, each string field's in range.
-static bool ValidRow(const uint8_t* row, uint32_t length, uint32_t fieldCount,
-                     uint32_t stringFields, uint32_t stringCount)
+MLOC_NODISCARD static bool ValidRow(const uint8_t* row, uint32_t length, uint32_t fieldCount,
+                                    uint32_t stringFields, uint32_t stringCount)
 {
     uint32_t mask = row[0];
     uint32_t present = 0;

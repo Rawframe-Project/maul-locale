@@ -78,7 +78,7 @@ typedef struct ZoneCode
 
 // The sections of a payload whose size their counts give; false when it
 // is not.
-bool mlocZoneCodeTablesOf(DataSpan payload, ZoneCodeTables* out);
+MLOC_NODISCARD bool mlocZoneCodeTablesOf(DataSpan payload, ZoneCodeTables* out);
 
 // The validator of the zone codes unit: the sections, every index and
 // range, ids and names in strict order, a deprecated id's replacement not
@@ -88,7 +88,7 @@ MLOC_NODISCARD bool mlocValidZoneCodes(const DataView* view, DataSpan payload);
 
 // The tables of the first source of a set with a zone codes unit, or
 // false.
-bool mlocFindZoneCodeTables(const mlocDataSet* data, ZoneCodeTables* out);
+MLOC_NODISCARD bool mlocFindZoneCodeTables(const mlocDataSet* data, ZoneCodeTables* out);
 
 ZoneCode mlocZoneCode(const ZoneCodeTables* t, uint32_t code);
 

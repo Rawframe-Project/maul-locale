@@ -41,7 +41,7 @@ typedef struct Parents
     uint32_t textSize;
 } Parents;
 
-static bool ReadParents(DataSpan span, Parents* out)
+MLOC_NODISCARD static bool ReadParents(DataSpan span, Parents* out)
 {
     if (span.size < parentHeaderSize)
     {
@@ -86,7 +86,7 @@ static uint32_t KeyText(const mlocLocale* step, char* out);
 // Whether a text is a key as the library writes one: a locale id that
 // parses, without extensions, and that it writes back byte for byte, so
 // that what validation follows is what a lookup meets.
-static bool ValidKey(const char* text, uint32_t length)
+MLOC_NODISCARD static bool ValidKey(const char* text, uint32_t length)
 {
     mlocLocale locale;
     if (length == 0 || mlocParseLocale(text, length, &locale).status != mloc_success)
@@ -97,7 +97,7 @@ static bool ValidKey(const char* text, uint32_t length)
     return KeyText(&locale, key) == length && memcmp(key, text, length) == 0;
 }
 
-static bool ChainsEnd(const Parents* p);
+MLOC_NODISCARD static bool ChainsEnd(const Parents* p);
 
 bool mlocValidParents(const DataView* view, DataSpan payload)
 {
@@ -303,7 +303,7 @@ static void AddPosix(mlocLocale* step)
 
 // Takes the variant posix out of a step's variants; false when it has
 // none.
-static bool RemovePosix(mlocLocale* step)
+MLOC_NODISCARD static bool RemovePosix(mlocLocale* step)
 {
     size_t length = VariantsLength(step->tail, sizeof(step->tail));
     for (size_t at = 0; at < length;)
@@ -329,7 +329,7 @@ static bool RemovePosix(mlocLocale* step)
 }
 
 // Whether a locale has -u-va-posix, which its chain reads as the variant.
-static bool HasPosixKeyword(const mlocLocale* locale)
+MLOC_NODISCARD static bool HasPosixKeyword(const mlocLocale* locale)
 {
     const char* va = nullptr;
     return mlocFindKeyword(locale, "va", &va) == 5 && memcmp(va, "posix", 5) == 0;
@@ -385,7 +385,8 @@ static mlocLocale FirstStep(const mlocDataSet* data, const mlocLocale* locale)
 
 // The step after one, or false after root. Fails as parsing does on a
 // parent the table names, which validation has already parsed.
-static bool NextStep(const Parents* parents, mlocComponent component, mlocLocale* step)
+MLOC_NODISCARD static bool NextStep(const Parents* parents, mlocComponent component,
+                                    mlocLocale* step)
 {
     char key[MAX_KEY];
     uint32_t length = KeyText(step, key);
@@ -434,7 +435,7 @@ static bool NextStep(const Parents* parents, mlocComponent component, mlocLocale
 // maxChain steps. A chain from any locale either never meets an entry,
 // and then only drops subtags until root, or continues as the chain of
 // the first entry it meets; so every chain of a valid file ends.
-static bool ChainsEnd(const Parents* p)
+MLOC_NODISCARD static bool ChainsEnd(const Parents* p)
 {
     for (uint32_t i = 0; i < p->count; i++)
     {
@@ -456,7 +457,7 @@ static bool ChainsEnd(const Parents* p)
     return true;
 }
 
-static bool OpenParents(const mlocDataSet* data, Parents* parents)
+MLOC_NODISCARD static bool OpenParents(const mlocDataSet* data, Parents* parents)
 {
     DataSpan span;
     return mlocFindDataSetUnit(data, kindLocaleParents, nullptr, 0, &span) &&
@@ -539,7 +540,7 @@ static inline void WalkStart(ChainWalk* w, const mlocDataSet* data, mlocComponen
 
 // Moves to the next step; false at the chain's end, with *okOut false
 // when the chain is needed and the data has no parents table.
-static inline bool WalkNext(ChainWalk* w, bool* okOut)
+MLOC_NODISCARD static inline bool WalkNext(ChainWalk* w, bool* okOut)
 {
     *okOut = true;
     // Root ends every chain, parents table or none.
@@ -602,9 +603,9 @@ bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint
 }
 
 // The chain's steps in the sources not in without (the first 32's bits).
-static inline bool VisitChain(const mlocDataSet* data, mlocComponent component,
-                              const mlocLocale* locale, uint32_t without, LocaleStepVisitor visit,
-                              void* context)
+MLOC_NODISCARD static inline bool VisitChain(const mlocDataSet* data, mlocComponent component,
+                                             const mlocLocale* locale, uint32_t without,
+                                             LocaleStepVisitor visit, void* context)
 {
     ChainWalk w;
     WalkStart(&w, data, component, locale);
@@ -660,7 +661,7 @@ typedef struct Found
     bool found;
 } Found;
 
-static bool TakeFirst(void* context, DataSpan unit, const DataView* view, int depth)
+MLOC_NODISCARD static bool TakeFirst(void* context, DataSpan unit, const DataView* view, int depth)
 {
     Found* f = context;
     *f->span = unit;

@@ -124,7 +124,8 @@ void mlocNfdStartText(NfdStream* s, NfdText text)
 
 // Whether the code point at the byte is a mark whose decomposition holds
 // no starter, its decomposition and size given.
-static bool Mark(const NfdStream* s, size_t at, uint32_t* d, uint32_t* n, size_t* size)
+MLOC_NODISCARD static bool Mark(const NfdStream* s, size_t at, uint32_t* d, uint32_t* n,
+                                size_t* size)
 {
     *n = Decompose(Decode(s, at, size), d);
     for (uint32_t i = 0; i < *n; i++)
@@ -327,7 +328,7 @@ static void Place(NfdStream* s, Sources* q, uint32_t normalized)
 }
 
 // Whether a code point is its own NFD with class 0.
-static bool Plain(uint32_t codePoint)
+MLOC_NODISCARD static bool Plain(uint32_t codePoint)
 {
     uint32_t first = 0;
     uint32_t second = 0;
@@ -348,7 +349,7 @@ enum
 // window filled without the segment work, its first code point from the
 // source's start and the rest from its end, as the full path places
 // them. False, the stream unchanged, for any other.
-static bool FillQuick(NfdStream* s)
+MLOC_NODISCARD static bool FillQuick(NfdStream* s)
 {
     size_t size = 0;
     uint32_t c = Decode(s, s->at, &size);

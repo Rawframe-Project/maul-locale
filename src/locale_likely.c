@@ -43,7 +43,7 @@ static Likely ReadLikely(DataSpan span)
 
 // A packed tag whose parts are valid; script and region may be absent
 // unless full.
-static bool ValidTag(uint64_t tag, bool full)
+MLOC_NODISCARD static bool ValidTag(uint64_t tag, bool full)
 {
     uint64_t language = tag >> 31;
     uint32_t script = (uint32_t)(tag >> 11) & 0xFFFFF;
@@ -54,7 +54,7 @@ static bool ValidTag(uint64_t tag, bool full)
            ((region == 0 && !full) || mlocValidPackedRegion(region));
 }
 
-static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut);
+MLOC_NODISCARD static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut);
 
 bool mlocValidLikely(const DataView* view, DataSpan payload)
 {
@@ -98,7 +98,7 @@ bool mlocValidLikely(const DataView* view, DataSpan payload)
     return FindGeneral(&likely, mlocPackTag(und, 0, 0), &root);
 }
 
-static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut)
+MLOC_NODISCARD static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut)
 {
     uint32_t low = 0;
     uint32_t high = likely->generalCount;
@@ -123,7 +123,7 @@ static bool FindGeneral(const Likely* likely, uint64_t key, uint64_t* valueOut)
     return false;
 }
 
-static bool FindLanguage(const Likely* likely, uint32_t language, uint64_t* valueOut)
+MLOC_NODISCARD static bool FindLanguage(const Likely* likely, uint32_t language, uint64_t* valueOut)
 {
     uint32_t low = 0;
     uint32_t high = likely->languageCount;
@@ -161,8 +161,8 @@ static uint32_t FieldLength(const char* field, uint32_t size)
 
 // The table's answer for a language, script and region, the latter two
 // possibly 0, in UTS #35's order.
-static bool Lookup(const Likely* likely, uint32_t language, uint32_t script, uint32_t region,
-                   uint64_t* valueOut)
+MLOC_NODISCARD static bool Lookup(const Likely* likely, uint32_t language, uint32_t script,
+                                  uint32_t region, uint64_t* valueOut)
 {
     bool und = language == mlocPackLanguage("und", 3);
     return (script != 0 && region != 0 &&

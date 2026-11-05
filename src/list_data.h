@@ -41,7 +41,7 @@ typedef struct ListPatterns
 // Finds a locale's patterns of a style along its main chain. False when
 // the data has no lists, its units disagree, or the chain cannot be
 // walked.
-bool mlocFindListPatterns(const mlocDataSet* data, const mlocLocale* locale, ListStyle style,
-                          ListPatterns* out);
+MLOC_NODISCARD bool mlocFindListPatterns(const mlocDataSet* data, const mlocLocale* locale,
+                                         ListStyle style, ListPatterns* out);
 
 #endif

@@ -9,6 +9,8 @@
 #ifndef MLOC_WIDE_H
 #define MLOC_WIDE_H
 
+#include "maul-locale/base.h"
+
 #include <stdint.h>
 
 enum
@@ -27,25 +29,25 @@ typedef struct Wide
 // The value of a 64-bit integer.
 Wide mlocWideOf(uint64_t value);
 
-bool mlocWideIsZero(const Wide* a);
+MLOC_NODISCARD bool mlocWideIsZero(const Wide* a);
 
 // -1, 0 or 1 as a is less than, equal to or greater than b.
 int mlocWideCompare(const Wide* a, const Wide* b);
 
 // out = a * b; false when it does not fit. out may be a or b.
-bool mlocWideMultiply(Wide* out, const Wide* a, const Wide* b);
+MLOC_NODISCARD bool mlocWideMultiply(Wide* out, const Wide* a, const Wide* b);
 
 // a = a * factor + addend; false when it does not fit.
-bool mlocWideMultiplyAdd(Wide* a, uint32_t factor, uint32_t addend);
+MLOC_NODISCARD bool mlocWideMultiplyAdd(Wide* a, uint32_t factor, uint32_t addend);
 
 // out = a + b; false when it does not fit. out may be a or b.
-bool mlocWideAdd(Wide* out, const Wide* a, const Wide* b);
+MLOC_NODISCARD bool mlocWideAdd(Wide* out, const Wide* a, const Wide* b);
 
 // out = a - b for a at least b. out may be a or b.
 void mlocWideSubtract(Wide* out, const Wide* a, const Wide* b);
 
 // a = a * 10^power; false when it does not fit.
-bool mlocWideScale10(Wide* a, uint32_t power);
+MLOC_NODISCARD bool mlocWideScale10(Wide* a, uint32_t power);
 
 // a = a / divisor, giving the remainder; divisor is not 0.
 uint32_t mlocWideDivideSmall(Wide* a, uint32_t divisor);

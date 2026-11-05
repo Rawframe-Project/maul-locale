@@ -22,7 +22,7 @@ static uint32_t PlaceOf(const AssetFormat* format, uint32_t tag)
 }
 
 // Whether the bytes from at to end are zero.
-static bool Zeros(const uint8_t* bytes, uint64_t at, uint64_t end)
+MLOC_NODISCARD static bool Zeros(const uint8_t* bytes, uint64_t at, uint64_t end)
 {
     for (; at < end; at++)
     {

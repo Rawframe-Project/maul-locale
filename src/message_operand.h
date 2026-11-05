@@ -52,20 +52,20 @@ mlocMessageFaultKind mlocSetListFrom(void* context, const uint8_t* name, size_t 
 
 // The list a mloc:list operand gives: a list argument, or another
 // mloc:list value, whose options pass on; false for anything else.
-bool mlocListOperand(const Value* operand, ListValue* out);
+MLOC_NODISCARD bool mlocListOperand(const Value* operand, ListValue* out);
 
 // The date value a date function's operand gives: a date/time literal
 // (or a string argument that is one), a date, time, date-time, instant
 // or zoned argument, or another date function's value, whose override
 // options pass on; false for anything else or parts the function cannot
 // take.
-bool mlocDateOperand(const mlocDataSet* data, DateFunction function, const Value* operand,
-                     DateValue* out);
+MLOC_NODISCARD bool mlocDateOperand(const mlocDataSet* data, DateFunction function,
+                                    const Value* operand, DateValue* out);
 
 // The duration a mloc:duration operand gives: a duration literal (or a
 // string argument that is one), a duration argument, a number of
 // seconds, or another mloc:duration value, whose options pass on; false
 // for anything else.
-bool mlocDurationOperand(const Value* operand, DurationValue* out);
+MLOC_NODISCARD bool mlocDurationOperand(const Value* operand, DurationValue* out);
 
 #endif

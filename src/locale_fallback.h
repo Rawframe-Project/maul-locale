@@ -19,9 +19,9 @@ MLOC_NODISCARD bool mlocValidParents(const DataView* view, DataSpan payload);
 // *viewOut, when not null, receives the source that holds it, whose
 // other units the unit's indexes name. False when no step has it, or
 // when the chain is needed and the data has no parents table.
-bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component, uint32_t kind,
-                        const mlocLocale* locale, DataSpan* spanOut, bool* fellBackOut,
-                        DataView* viewOut);
+MLOC_NODISCARD bool mlocFindLocaleUnit(const mlocDataSet* data, mlocComponent component,
+                                       uint32_t kind, const mlocLocale* locale, DataSpan* spanOut,
+                                       bool* fellBackOut, DataView* viewOut);
 
 // Called with each unit of a walk along a locale's chain, the source
 // that holds it and its step (0 for the locale's own key); returns true
@@ -33,8 +33,9 @@ typedef bool (*LocaleUnitVisitor)(void* context, DataSpan unit, const DataView* 
 // component, each in every source of the set in order, until the visitor
 // ends the walk. False when the chain is needed and the data has no
 // parents table.
-bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component, uint32_t kind,
-                          const mlocLocale* locale, LocaleUnitVisitor visit, void* context);
+MLOC_NODISCARD bool mlocVisitLocaleUnits(const mlocDataSet* data, mlocComponent component,
+                                         uint32_t kind, const mlocLocale* locale,
+                                         LocaleUnitVisitor visit, void* context);
 
 // Called with each step of a locale's chain that a source holds: the
 // source, the locale's index in it and the step (0 for the locale's own
@@ -45,13 +46,15 @@ typedef bool (*LocaleStepVisitor)(void* context, const DataView* view, uint32_t 
 // order mlocVisitLocaleUnits visits units, for a part that looks up many
 // units at the same steps. False when the chain is needed and the data
 // has no parents table.
-bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
-                          const mlocLocale* locale, LocaleStepVisitor visit, void* context);
+MLOC_NODISCARD bool mlocVisitLocaleChain(const mlocDataSet* data, mlocComponent component,
+                                         const mlocLocale* locale, LocaleStepVisitor visit,
+                                         void* context);
 
 // mlocVisitLocaleChain in the sources that hold a unit of a kind alone,
 // for a part whose units are all of one kind: the others are not
 // searched for the locale.
-bool mlocVisitLocaleChainOf(const mlocDataSet* data, mlocComponent component, uint32_t kind,
-                            const mlocLocale* locale, LocaleStepVisitor visit, void* context);
+MLOC_NODISCARD bool mlocVisitLocaleChainOf(const mlocDataSet* data, mlocComponent component,
+                                           uint32_t kind, const mlocLocale* locale,
+                                           LocaleStepVisitor visit, void* context);
 
 #endif

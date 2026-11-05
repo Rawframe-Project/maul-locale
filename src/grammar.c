@@ -159,7 +159,7 @@ mlocResult mlocInitInflector(const mlocDataSet* data, const mlocLocale* locale,
 }
 
 // An inflector the library made, copied out; false for any other.
-static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
+MLOC_NODISCARD static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
 {
     if (opaque == nullptr)
     {
@@ -179,7 +179,7 @@ static bool ReadInflector(const mlocInflector* opaque, Inflector* f)
            f->language <= languageKorean && f->spoken <= 1;
 }
 
-static bool IsTurkic(const Inflector* f)
+MLOC_NODISCARD static bool IsTurkic(const Inflector* f)
 {
     return f->language <= languageTurkmen;
 }
@@ -196,7 +196,8 @@ static const TurkicLanguage* LanguageOf(const Inflector* f)
 
 // Copies the last word of a text into spoken; false when it does not
 // fit.
-static bool LastWord(const char* text, size_t length, char* spoken, size_t* spokenLength)
+MLOC_NODISCARD static bool LastWord(const char* text, size_t length, char* spoken,
+                                    size_t* spokenLength)
 {
     size_t start = length;
     while (start > 0 && text[start - 1] != ' ')
@@ -217,8 +218,8 @@ static bool LastWord(const char* text, size_t length, char* spoken, size_t* spok
 // yirmi), from the ordinal when a period follows it.
 // The last word of an integer by a language's own number words (a
 // language without spell-out rules); false when it has none for it.
-static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value, char* spoken,
-                       size_t* spokenLength)
+MLOC_NODISCARD static bool NumberWord(const TurkicLanguage* language, const mlocDecimal* value,
+                                      char* spoken, size_t* spokenLength)
 {
     const char* word = value->count == 0 ? language->numberWord(0, 0)
                        : value->exponent < 0
@@ -420,7 +421,7 @@ static_assert(hungarianSuffixRoom <= sizeof(((Inflected*)nullptr)->suffixes.text
 static_assert(finnishSuffixRoom <= sizeof(((Inflected*)nullptr)->suffixes.text),
               "Finnish suffixes fit");
 
-static bool ValidRequest(const Inflector* f, const mlocInflection* r)
+MLOC_NODISCARD static bool ValidRequest(const Inflector* f, const mlocInflection* r)
 {
     return (uint32_t)r->reading <= mloc_readingLetters &&
            (r->hint != nullptr || r->hintLength == 0) &&
@@ -796,7 +797,7 @@ static mlocResult Output(const uint8_t* text, const Inflected* in, mlocOutput* o
     return mlocWriteOutput(WriteInflectedText, &g, output);
 }
 
-static bool ValidOutput(const mlocOutput* output)
+MLOC_NODISCARD static bool ValidOutput(const mlocOutput* output)
 {
     return output != nullptr && (output->buffer != nullptr || output->capacity == 0);
 }

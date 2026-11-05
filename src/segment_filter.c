@@ -155,7 +155,7 @@ static uint32_t EntryLength(const Segmenter* s, uint32_t i)
 }
 
 // Whether the text before an offset ends with an entry.
-static bool EndsWith(const Segmenter* s, size_t offset, uint32_t i)
+MLOC_NODISCARD static bool EndsWith(const Segmenter* s, size_t offset, uint32_t i)
 {
     uint32_t length = EntryLength(s, i);
     if (length > offset)
@@ -197,7 +197,7 @@ static uint32_t LongestBackward(const Segmenter* s, size_t offset)
 // goes on with it stops and keeps the break (NO_MATCH); at the end of the
 // text it suppresses only right after an entry (INTERMEDIATE_VALUE).
 // Whether an entry goes on with a byte after the bytes read.
-static bool Takes(const Segmenter* s, uint32_t i, uint32_t read, int byte)
+MLOC_NODISCARD static bool Takes(const Segmenter* s, uint32_t i, uint32_t read, int byte)
 {
     return EntryLength(s, i) > read && s->text[EntryStart(s, i) + read] == byte;
 }

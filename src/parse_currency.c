@@ -28,7 +28,7 @@ enum
 // the only one CLDR gives.
 static const uint8_t s_nbsp[2] = {0xC2, 0xA0};
 
-static bool SeenNumber(const Parsed* p)
+MLOC_NODISCARD static bool SeenNumber(const Parsed* p)
 {
     return p->quantity.present || (p->flags & (parsedNaN | parsedInfinity)) != 0;
 }
@@ -42,7 +42,7 @@ static void Take(Segment* s, Parsed* p, size_t bytes, const char* code)
 }
 
 // Whether the segment begins with the bytes of a text.
-static bool Begins(const Segment* s, const uint8_t* text, size_t length)
+MLOC_NODISCARD static bool Begins(const Segment* s, const uint8_t* text, size_t length)
 {
     return length > 0 && s->length - s->at >= length && memcmp(s->text + s->at, text, length) == 0;
 }
@@ -148,7 +148,7 @@ typedef struct Search
 
 // Whether a code point's uppercase continues the input's uppercase at a
 // unit, moving the unit on; the name is cut at its own length.
-static bool UpperMatches(const Search* q, uint32_t cp, uint32_t* at, uint32_t units)
+MLOC_NODISCARD static bool UpperMatches(const Search* q, uint32_t cp, uint32_t* at, uint32_t units)
 {
     if (cp < 0x80 && !(q->turkic && cp == 'i'))
     {
@@ -261,7 +261,7 @@ static size_t Encode(uint32_t cp, uint8_t* out)
 
 // Whether text that begins with a code point and a byte may begin with a
 // member of a currency sign class.
-static bool MayBeSign(const uint8_t* sets, uint32_t lead, uint8_t first)
+MLOC_NODISCARD static bool MayBeSign(const uint8_t* sets, uint32_t lead, uint8_t first)
 {
     for (uint32_t set = parseDollar; set <= parseRupee; set++)
     {
@@ -499,7 +499,7 @@ static void TryListed(Search* q, const CurrencyChain* c, uint32_t step, uint16_t
 }
 
 // A step's plural names of a currency; whether it gives any.
-static bool TryPlurals(Search* q, uint16_t packed, const Given* g)
+MLOC_NODISCARD static bool TryPlurals(Search* q, uint16_t packed, const Given* g)
 {
     char code[3];
     mlocUnpackCurrency(packed, code);
@@ -520,7 +520,7 @@ static bool TryPlurals(Search* q, uint16_t packed, const Given* g)
     return any;
 }
 
-static bool Seen(const uint8_t* bits, uint16_t code)
+MLOC_NODISCARD static bool Seen(const uint8_t* bits, uint16_t code)
 {
     // A code of a valid table (mlocValidSparse: 1 to currencyMaxCode).
     MLOC_ASSERT(code >= 1 && code <= currencyMaxCode);
@@ -642,7 +642,7 @@ static size_t LongestName(const Parser* r, const ParseCurrency* c, const Segment
 // Whether a code point after the code can go on a name: no name has a
 // digit or an ignorable but a bidi control past its first letters where
 // it begins with the code.
-static bool NameGoesOn(const Parser* r, const Segment* s)
+MLOC_NODISCARD static bool NameGoesOn(const Parser* r, const Segment* s)
 {
     if (s->at == s->length)
     {
@@ -663,7 +663,7 @@ static bool NameGoesOn(const Parser* r, const Segment* s)
 // writes. The symbol may begin with that text and the code's first letters
 // (fr-CA writes USD's narrow symbol as "$" and its symbol as "$ US", so
 // "0,00 $ USD"), and read first it would leave the code unread.
-static bool ShownBeforeCode(const Parser* r, const ParseCurrency* c, Segment* s)
+MLOC_NODISCARD static bool ShownBeforeCode(const Parser* r, const ParseCurrency* c, Segment* s)
 {
     if (!c->appended || !Begins(s, c->shown, c->shownLength))
     {

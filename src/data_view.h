@@ -91,36 +91,39 @@ static inline DataView mlocViewOf(const mlocData* data)
 MLOC_NODISCARD bool mlocValidDataSet(const mlocDataSet* set);
 
 // The index of a locale id, or false when the source has none.
-bool mlocFindDataLocale(const DataView* view, const char* id, size_t length, uint32_t* indexOut);
+MLOC_NODISCARD bool mlocFindDataLocale(const DataView* view, const char* id, size_t length,
+                                       uint32_t* indexOut);
 
 // A unit by its kind and locale index (dataNoLocale for a unit of no
 // locale), or false.
-bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut);
+MLOC_NODISCARD bool mlocFindDataUnit(const DataView* view, uint32_t kind, uint32_t locale,
+                                     DataSpan* spanOut);
 
 // mlocFindDataUnit; on a miss, whether the source has no unit of the kind
 // at all.
-bool mlocFindDataUnitOrKind(const DataView* view, uint32_t kind, uint32_t locale, DataSpan* spanOut,
-                            bool* noKindOut);
+MLOC_NODISCARD bool mlocFindDataUnitOrKind(const DataView* view, uint32_t kind, uint32_t locale,
+                                           DataSpan* spanOut, bool* noKindOut);
 
 // Whether a source of a set has a unit of the kind.
-bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind);
+MLOC_NODISCARD bool mlocDataSetHasKind(const mlocDataSet* set, uint32_t kind);
 
 // Whether a source holds a unit of a kind.
-bool mlocDataHasKind(const DataView* view, uint32_t kind);
+MLOC_NODISCARD bool mlocDataHasKind(const DataView* view, uint32_t kind);
 
 // The first source of a set with a unit of the kind for the locale id
 // (null for a unit of no locale), or false.
-bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id, size_t length,
-                         DataSpan* spanOut);
+MLOC_NODISCARD bool mlocFindDataSetUnit(const mlocDataSet* set, uint32_t kind, const char* id,
+                                        size_t length, DataSpan* spanOut);
 
 // A unit by its place in the unit table: its kind and payload, or false
 // past the table. The open checked every entry, so a view an open made
 // reads only its own payloads.
-bool mlocDataUnitAt(const DataView* view, uint32_t index, uint32_t* kindOut, DataSpan* spanOut);
+MLOC_NODISCARD bool mlocDataUnitAt(const DataView* view, uint32_t index, uint32_t* kindOut,
+                                   DataSpan* spanOut);
 
 // The first source of a set with a unit of the kind and no locale: the
 // source's place in the set, the unit's in its table, and its payload.
-bool mlocFindDataSetUnitAt(const mlocDataSet* set, uint32_t kind, size_t* sourceOut,
-                           uint32_t* indexOut, DataSpan* spanOut);
+MLOC_NODISCARD bool mlocFindDataSetUnitAt(const mlocDataSet* set, uint32_t kind, size_t* sourceOut,
+                                          uint32_t* indexOut, DataSpan* spanOut);
 
 #endif

@@ -49,7 +49,7 @@ static const uint16_t s_years[] = {
     0x2B94,
 };
 
-static bool InTable(int64_t year)
+MLOC_NODISCARD static bool InTable(int64_t year)
 {
     return year >= firstYear && year <= lastYear;
 }

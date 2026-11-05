@@ -56,7 +56,7 @@ void mlocWriteZoneField(void* context, const uint8_t* item, NumberWriter* w)
     }
 }
 
-static bool KeywordIs(const char* value, size_t length, const char* want)
+MLOC_NODISCARD static bool KeywordIs(const char* value, size_t length, const char* want)
 {
     return length == strlen(want) && memcmp(value, want, length) == 0;
 }
@@ -112,9 +112,9 @@ static uint32_t StandardEntry(const uint8_t* set, mlocTimeStyle style, bool twel
     return (twelve ? dateTimeStyle12 : dateTimeStyle24) + (style == mloc_timeStyleShort ? 0 : 1);
 }
 
-static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
-                         const mlocTimeOptions* o, mlocHourCycle cycle, bool asked,
-                         uint32_t entries[timeFormatPatterns])
+MLOC_NODISCARD static bool FindPatterns(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
+                                        const mlocTimeOptions* o, mlocHourCycle cycle, bool asked,
+                                        uint32_t entries[timeFormatPatterns])
 {
     bool twelve =
         cycle == mloc_hourCycleH11 || cycle == mloc_hourCycleH12 || cycle == mloc_hourCycleClock12;
@@ -185,7 +185,7 @@ static uint32_t IntervalEntry(uint32_t entry)
 }
 
 // The relative date-time glue of each length, each holding {0} and {1}.
-static bool FindRelativeGlues(TimeRange* r, const uint8_t* set)
+MLOC_NODISCARD static bool FindRelativeGlues(TimeRange* r, const uint8_t* set)
 {
     for (uint32_t i = 0; i < dateStandardCount; i++)
     {
@@ -203,8 +203,9 @@ static bool FindRelativeGlues(TimeRange* r, const uint8_t* set)
 // The formatter's interval patterns: each kept pattern's pair, a
 // standard format's own pattern, the fallback, and what a range in a
 // zone across dates joins.
-static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
-                      const uint8_t* intervals, const uint32_t entries[timeFormatPatterns])
+MLOC_NODISCARD static bool FindRange(TimeFormat* f, const DatePatterns* p, const uint8_t* set,
+                                     const uint8_t* intervals,
+                                     const uint32_t entries[timeFormatPatterns])
 {
     enum
     {
@@ -365,7 +366,8 @@ bool mlocReadTimeFormat(const mlocTimeFormatter* opaque, TimeFormat* format)
 
 // A formatter the library made, copied out, with a zone or without as
 // asked; false for any other.
-static bool ReadFormatter(const mlocTimeFormatter* opaque, bool zoned, ZonedTimeFormat* f)
+MLOC_NODISCARD static bool ReadFormatter(const mlocTimeFormatter* opaque, bool zoned,
+                                         ZonedTimeFormat* f)
 {
     if (opaque == nullptr)
     {

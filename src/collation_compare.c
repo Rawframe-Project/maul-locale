@@ -379,7 +379,7 @@ static int Identical(NfdText a, NfdText b)
     }
 }
 
-static bool InRanges(const CollationRoot* unit, uint32_t c)
+MLOC_NODISCARD static bool InRanges(const CollationRoot* unit, uint32_t c)
 {
     return unit != nullptr && mlocCollationInUnsafe(unit->unsafe, unit->unsafeCount, c);
 }
@@ -398,8 +398,8 @@ bool mlocCollationUnsafeBackward(const CollationRoot* root, const CollationSetti
 
 // Whether the code point at a position of a text, if any, is
 // unsafe-backward.
-static bool UnsafeAt(const CollationRoot* root, const CollationSettings* settings, NfdText text,
-                     size_t at)
+MLOC_NODISCARD static bool UnsafeAt(const CollationRoot* root, const CollationSettings* settings,
+                                    NfdText text, size_t at)
 {
     size_t size = 0;
     return at < text.length &&
@@ -408,7 +408,7 @@ static bool UnsafeAt(const CollationRoot* root, const CollationSettings* setting
 
 // Whether a position is inside a code point: a UTF-8 continuation byte,
 // or a UTF-16 trail surrogate after a lead.
-static bool Inside(NfdText text, size_t at)
+MLOC_NODISCARD static bool Inside(NfdText text, size_t at)
 {
     if (at == 0 || at >= text.length)
     {

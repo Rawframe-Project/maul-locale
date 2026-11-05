@@ -32,7 +32,7 @@ static int64_t NanosecondOfDay(const mlocTime* t)
            t->nanosecond;
 }
 
-static bool Usable(const mlocDateTime* d)
+MLOC_NODISCARD static bool Usable(const mlocDateTime* d)
 {
     return d != nullptr && mlocDateTimeValid(d) && mlocDateTimeWithinLimits(d);
 }
@@ -81,8 +81,8 @@ mlocResult mlocAddToDateTime(const mlocDateTime* dateTime, const mlocDateTimeDur
 // DifferenceISODateTime: the date difference to the second date, moved a
 // day toward the first when the times run against the dates, and the
 // time difference; a largest time unit takes the days into the time.
-static bool Difference(const mlocDateTime* one, const mlocDateTime* two, mlocUnit largest,
-                       RelativeDuration* out)
+MLOC_NODISCARD static bool Difference(const mlocDateTime* one, const mlocDateTime* two,
+                                      mlocUnit largest, RelativeDuration* out)
 {
     int64_t time = NanosecondOfDay(&two->time) - NanosecondOfDay(&one->time);
     int timeSign = SignOf(time);

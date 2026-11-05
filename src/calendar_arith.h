@@ -32,6 +32,6 @@ int64_t mlocArithmeticToDay(mlocCalendar calendar, int64_t year, uint32_t month,
 
 uint32_t mlocArithmeticMonths(mlocCalendar calendar);
 uint32_t mlocArithmeticDaysInMonth(mlocCalendar calendar, int64_t year, uint32_t month);
-bool mlocArithmeticLeap(mlocCalendar calendar, int64_t year);
+MLOC_NODISCARD bool mlocArithmeticLeap(mlocCalendar calendar, int64_t year);
 
 #endif

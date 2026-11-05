@@ -13,14 +13,14 @@
 static const int64_t s_maxYearsMonthsWeeks = INT64_C(4294967295);
 static const int64_t s_maxDays = INT64_C(104249991374);
 
-static bool InLimit(int64_t value, int64_t limit)
+MLOC_NODISCARD static bool InLimit(int64_t value, int64_t limit)
 {
     return value >= -limit && value <= limit;
 }
 
 // Temporal's IsValidDuration for a date duration: one sign and the
 // fields' limits.
-static bool ValidDuration(const mlocDateDuration* d)
+MLOC_NODISCARD static bool ValidDuration(const mlocDateDuration* d)
 {
     bool positive = d->years > 0 || d->months > 0 || d->weeks > 0 || d->days > 0;
     bool negative = d->years < 0 || d->months < 0 || d->weeks < 0 || d->days < 0;

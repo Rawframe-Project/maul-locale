@@ -104,19 +104,19 @@ static mlocResult Kept(Body body, const void* context, mlocOutput* output)
     return mlocWriteKept(RunPass, &p, scratch, sizeof(scratch), output);
 }
 
-static bool OutputValid(const mlocOutput* output)
+MLOC_NODISCARD static bool OutputValid(const mlocOutput* output)
 {
     return output != nullptr && (output->buffer != nullptr || output->capacity == 0);
 }
 
-static bool IsAlphaNumeric(char ch)
+MLOC_NODISCARD static bool IsAlphaNumeric(char ch)
 {
     return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
 // Whether a calendar id is the grammar's AnnotationValue: components of
 // one to eight letters or digits joined by hyphens.
-static bool CalendarIdValid(const char* id, size_t length)
+MLOC_NODISCARD static bool CalendarIdValid(const char* id, size_t length)
 {
     size_t run = 0;
     for (size_t i = 0; i < length; i += 1)
@@ -139,8 +139,8 @@ static bool CalendarIdValid(const char* id, size_t length)
 
 // The options with their defaults, checked, and the precision as 0 to 9
 // digits, precisionAuto or precisionMinute; false when out of range.
-static bool ReadOptions(const mlocTemporalStringOptions* given, mlocTemporalStringOptions* out,
-                        int* precisionOut)
+MLOC_NODISCARD static bool ReadOptions(const mlocTemporalStringOptions* given,
+                                       mlocTemporalStringOptions* out, int* precisionOut)
 {
     static const char s_iso[7] = {'i', 's', 'o', '8', '6', '0', '1'};
     *out = given != nullptr ? *given : (mlocTemporalStringOptions){0};
@@ -163,7 +163,7 @@ static bool ReadOptions(const mlocTemporalStringOptions* given, mlocTemporalStri
            (uint32_t)out->showTimeZone <= mloc_showTimeZoneCritical;
 }
 
-static bool IsIso(const mlocTemporalStringOptions* o)
+MLOC_NODISCARD static bool IsIso(const mlocTemporalStringOptions* o)
 {
     return o->calendarLength == 7 && memcmp(o->calendar, "iso8601", 7) == 0;
 }
@@ -262,7 +262,8 @@ typedef struct Start
     int precision;
 } Start;
 
-static bool Begin(const mlocTemporalStringOptions* given, const mlocOutput* output, Start* s)
+MLOC_NODISCARD static bool Begin(const mlocTemporalStringOptions* given, const mlocOutput* output,
+                                 Start* s)
 {
     return OutputValid(output) && ReadOptions(given, &s->o, &s->precision);
 }
@@ -408,8 +409,8 @@ static void OffsetRounded(Writer* w, int32_t seconds)
 
 // The local date-time and offset of an instant, in universal time
 // without a zone.
-static bool Local(const mlocTimeZone* zone, const mlocInstant* instant, mlocDateTime* dateTimeOut,
-                  int32_t* offsetOut)
+MLOC_NODISCARD static bool Local(const mlocTimeZone* zone, const mlocInstant* instant,
+                                 mlocDateTime* dateTimeOut, int32_t* offsetOut)
 {
     static const mlocTimeZone s_utc = {0};
     const mlocTimeZone* z = zone != nullptr ? zone : &s_utc;
@@ -502,7 +503,7 @@ typedef struct Fields
     Wide subMinute;
 } Fields;
 
-static bool ReadDuration(const mlocDurationValues* v, Fields* f)
+MLOC_NODISCARD static bool ReadDuration(const mlocDurationValues* v, Fields* f)
 {
     mlocDateTimeDuration checked;
     if (v == nullptr || mlocMakeDuration(v, &checked) != mloc_success)

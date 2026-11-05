@@ -7,6 +7,8 @@
 #ifndef MLOC_GRAMMAR_FI_WORD_H
 #define MLOC_GRAMMAR_FI_WORD_H
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -38,12 +40,12 @@ uint32_t mlocFinnishSmall(uint32_t c);
 // finnishLettersRead of them at most; fromOut receives where they begin.
 void mlocFinnishReadWord(const uint8_t* text, size_t length, FinnishWord* out, size_t* fromOut);
 
-bool mlocFinnishIsVowel(uint32_t c);
+MLOC_NODISCARD bool mlocFinnishIsVowel(uint32_t c);
 
 // The harmony by the last vowel that is not e or i: back for a, o, u
 // (Tampereella, Hämeenlinnassa), front for ä, ö, y and for none
 // (Malmössä, Kemissä).
-bool mlocFinnishIsBack(const FinnishWord* w);
+MLOC_NODISCARD bool mlocFinnishIsBack(const FinnishWord* w);
 
 void mlocFinnishPush(FinnishWord* w, uint32_t c);
 

@@ -59,7 +59,7 @@ ListValue mlocMakeListValue(const mlocMessageValue* argument)
     return v;
 }
 
-static bool NameIs(const uint8_t* name, size_t length, const char* text)
+MLOC_NODISCARD static bool NameIs(const uint8_t* name, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
@@ -111,7 +111,7 @@ bool mlocPrepareList(const ListValue* value, const mlocDataSet* data, const mloc
 }
 
 // Whether a prepared list was made with a value's options.
-static bool Fits(const PreparedList* prepared, const ListValue* value)
+MLOC_NODISCARD static bool Fits(const PreparedList* prepared, const ListValue* value)
 {
     return prepared != NULL && memcmp(&prepared->key, &value->key, sizeof value->key) == 0;
 }
@@ -142,7 +142,8 @@ mlocMessageFaultKind mlocWriteListValue(const ListValue* value, const PreparedLi
 }
 
 // A plural keyword's category; false for another key.
-static bool Keyword(const uint8_t* key, size_t length, mlocPluralCategory* categoryOut)
+MLOC_NODISCARD static bool Keyword(const uint8_t* key, size_t length,
+                                   mlocPluralCategory* categoryOut)
 {
     for (int i = 0; i < (int)(sizeof(s_keywords) / sizeof(s_keywords[0])); i++)
     {

@@ -69,8 +69,9 @@ CollationSettings mlocCollationDefaults(const CollationRoot* root);
 // a mark's reordering or a numeric run (ICU4C's unsafe-backward set: a
 // mark, a later code point of a contraction in the root or the
 // tailoring, a digit under numeric).
-bool mlocCollationUnsafeBackward(const CollationRoot* root, const CollationSettings* settings,
-                                 uint32_t codePoint);
+MLOC_NODISCARD bool mlocCollationUnsafeBackward(const CollationRoot* root,
+                                                const CollationSettings* settings,
+                                                uint32_t codePoint);
 
 // ICU4C's identical prefix: how many bytes or units both texts begin
 // with, backed up to a code point's start and then, where a code point
@@ -92,9 +93,10 @@ int mlocCollationCompareFrom(const CollationRoot* root, const CollationSettings*
 // words, a shorter one first when it is the other's start, give their
 // order at the primary level. False when there are more than capacity,
 // with the first capacity of them given.
-bool mlocCollationPrimaries(const CollationRoot* root, const CollationSettings* settings,
-                            NfdText text, uint32_t* weightsOut, uint32_t capacity,
-                            uint32_t* countOut);
+MLOC_NODISCARD bool mlocCollationPrimaries(const CollationRoot* root,
+                                           const CollationSettings* settings, NfdText text,
+                                           uint32_t* weightsOut, uint32_t capacity,
+                                           uint32_t* countOut);
 
 // -1, 0 or 1 as a sorts before, with or after b, the identical prefix
 // skipped.

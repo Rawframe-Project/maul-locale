@@ -24,14 +24,14 @@ typedef struct SpelloutDivisor
 // positive.
 void mlocSpelloutNormalize(mlocDecimal* d);
 
-bool mlocSpelloutIsInteger(const mlocDecimal* d);
-bool mlocSpelloutIsZero(const mlocDecimal* d);
+MLOC_NODISCARD bool mlocSpelloutIsInteger(const mlocDecimal* d);
+MLOC_NODISCARD bool mlocSpelloutIsZero(const mlocDecimal* d);
 
 // An integer decimal's magnitude in 64 bits; false past them.
-bool mlocSpelloutMagnitude64(const mlocDecimal* d, uint64_t* out);
+MLOC_NODISCARD bool mlocSpelloutMagnitude64(const mlocDecimal* d, uint64_t* out);
 
 // An integer decimal as int64_t, INT64_MIN aside; false otherwise.
-bool mlocSpelloutToInt64(const mlocDecimal* d, int64_t* out);
+MLOC_NODISCARD bool mlocSpelloutToInt64(const mlocDecimal* d, int64_t* out);
 
 mlocDecimal mlocSpelloutFromInt64(int64_t n);
 mlocDecimal mlocSpelloutFromUnsigned(uint64_t n);
@@ -43,34 +43,38 @@ mlocDecimal mlocSpelloutAbsolute(const mlocDecimal* x);
 
 // x divided by 10^power (multiplied for a negative power), exact; false
 // past 10^±999999.
-bool mlocSpelloutShift(const mlocDecimal* x, int power, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutShift(const mlocDecimal* x, int power, mlocDecimal* out);
 
 // x - floor(x), ICU's number - uprv_floor(number).
-bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutFraction(const mlocDecimal* x, mlocDecimal* out);
 
 // x times a factor below 10^18.
-bool mlocSpelloutMultiply(const mlocDecimal* x, uint64_t factor, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutMultiply(const mlocDecimal* x, uint64_t factor, mlocDecimal* out);
 
 // floor(x / divisor), a divisor not a power of ten needing an integer
 // part within int64_t.
-bool mlocSpelloutDivideFloor(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutDivideFloor(const mlocDecimal* x, SpelloutDivisor divisor,
+                                            mlocDecimal* out);
 
 // x / divisor truncated, with x's sign.
-bool mlocSpelloutDivideTrunc(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutDivideTrunc(const mlocDecimal* x, SpelloutDivisor divisor,
+                                            mlocDecimal* out);
 
 // x / divisor exactly: a divisor of twos and fives alone, or a power of
 // ten.
-bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutDivideExact(const mlocDecimal* x, SpelloutDivisor divisor,
+                                            mlocDecimal* out);
 
 // fmod(x, divisor), with x's sign.
-bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutModulo(const mlocDecimal* x, SpelloutDivisor divisor,
+                                       mlocDecimal* out);
 
 // An integer decimal's magnitude mod a divisor, for any exponent.
 uint64_t mlocSpelloutMagnitudeMod(const mlocDecimal* d, uint64_t divisor);
 
 // a + b of finite decimals, exact; false when the sum passes a decimal's
 // digits or exponent.
-bool mlocSpelloutAdd(const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* out);
+MLOC_NODISCARD bool mlocSpelloutAdd(const mlocDecimal* a, const mlocDecimal* b, mlocDecimal* out);
 
 // The order of two finite decimals: -1, 0 or 1.
 int mlocSpelloutCompare(const mlocDecimal* a, const mlocDecimal* b);

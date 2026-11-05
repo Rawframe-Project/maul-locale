@@ -88,8 +88,8 @@ static uint32_t First(const uint8_t* text, size_t length, size_t* sizeOut)
 }
 
 // A code point's titlecase, or false when it has none other.
-static bool Titlecase(const mlocDataSet* data, const mlocLocale* locale, uint32_t cp,
-                      const uint8_t** textOut, uint32_t* lengthOut)
+MLOC_NODISCARD static bool Titlecase(const mlocDataSet* data, const mlocLocale* locale, uint32_t cp,
+                                     const uint8_t** textOut, uint32_t* lengthOut)
 {
     static const uint8_t s_dottedI[] = {0xC4, 0xB0};
     static const char s_upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

@@ -72,7 +72,7 @@ static size_t ArenaRoom(const Chain* c)
 // whose counts or cache, which it keeps, pass their bounds: every
 // count and the arena's bytes used are checked before anything is read
 // through them.
-static bool ReadChain(const mlocCatalogChain* chain, Chain* out)
+MLOC_NODISCARD static bool ReadChain(const mlocCatalogChain* chain, Chain* out)
 {
     if (chain == nullptr)
     {
@@ -332,7 +332,7 @@ static mlocResult Report(mlocResult written, mlocCatalogResult* resultOut, mlocC
     return written;
 }
 
-static bool ValidOutput(const mlocOutput* output)
+MLOC_NODISCARD static bool ValidOutput(const mlocOutput* output)
 {
     return output != nullptr && (output->buffer != nullptr || output->capacity == 0);
 }

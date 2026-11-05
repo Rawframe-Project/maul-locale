@@ -179,8 +179,8 @@ static const char* KyrgyzLetterName(uint32_t c)
 // й fuses with a suffix's у (тоюм); a final п or к after a vowel is
 // voiced before a vowel (китеби, Айбеги), in names too. No dictionary of
 // the words that keep a stop is free to use.
-static bool KyrgyzStem(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
-                       TurkicStem* out)
+MLOC_NODISCARD static bool KyrgyzStem(const uint8_t* word, size_t length, uint8_t marks,
+                                      TurkicSuffixes* suffixes, TurkicStem* out)
 {
     (void)marks;
     *out = (TurkicStem){.kept = length};

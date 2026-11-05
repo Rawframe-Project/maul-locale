@@ -92,7 +92,7 @@ static inline MessageText mlocResolutionString(const Resolution* r, uint32_t kin
 }
 
 // Whether a parameter is a u: option, hidden from functions.
-bool mlocUnicodeOption(const Resolution* r, uint32_t p);
+MLOC_NODISCARD bool mlocUnicodeOption(const Resolution* r, uint32_t p);
 
 // An option's value, its variable resolved quietly (its faults are
 // reported once, when the expression's options are checked).

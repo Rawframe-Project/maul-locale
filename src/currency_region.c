@@ -46,7 +46,7 @@ static int32_t LoadDay(const uint8_t* p)
     return day;
 }
 
-static bool ValidEntry(const uint8_t* e)
+MLOC_NODISCARD static bool ValidEntry(const uint8_t* e)
 {
     uint32_t code = mlocLoad16(e + regionEntryCode);
     return code >= 1 && code <= currencyMaxCode && e[regionEntryTender] <= 1 && e[3] == 0 &&
@@ -124,7 +124,7 @@ static uint32_t FindRegion(const Regions* r, uint32_t region, const uint8_t** fi
     return 0;
 }
 
-static bool OpenRegions(const mlocDataSet* data, Regions* out)
+MLOC_NODISCARD static bool OpenRegions(const mlocDataSet* data, Regions* out)
 {
     DataSpan unit;
     if (!mlocFindDataSetUnit(data, kindCurrencyRegions, nullptr, 0, &unit))

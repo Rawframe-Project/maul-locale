@@ -231,7 +231,7 @@ static inline uint64_t mlocPackTag(uint32_t language, uint32_t script, uint32_t 
 
 // Whether count 5-bit groups, highest first, hold letters: the first
 // `required` must, and the rest may be zero once one is.
-static inline bool mlocPackedLetters(uint64_t packed, int count, int required)
+MLOC_NODISCARD static inline bool mlocPackedLetters(uint64_t packed, int count, int required)
 {
     for (int i = 0; i < count; i++)
     {

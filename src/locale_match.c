@@ -22,7 +22,7 @@ static_assert(sizeof(Lsr) == sizeof(mlocMatchEntry), "an entry holds an LSR");
 
 // The tables, and that the likely subtags answer every locale: they
 // fall back to "und", so a table that has it never fails one.
-static bool Open(const mlocDataSet* data, Likely* likely, MatchTable* table)
+MLOC_NODISCARD static bool Open(const mlocDataSet* data, Likely* likely, MatchTable* table)
 {
     uint64_t und = 0;
     return mlocOpenLikely(data, likely) && mlocOpenMatchTable(data, table) &&
@@ -36,7 +36,7 @@ static Lsr EntryAt(const mlocMatchEntry* entries, size_t i)
     return lsr;
 }
 
-static bool IsParadigm(const MatchTable* table, const Lsr* lsr)
+MLOC_NODISCARD static bool IsParadigm(const MatchTable* table, const Lsr* lsr)
 {
     if (lsr->kind != lsrNormal || lsr->packedLanguage == 0)
     {
@@ -89,7 +89,7 @@ static size_t Gather(const MatchTable* table, mlocMatchEntry* entries, size_t co
 }
 
 // Whether each of count locales is valid (mlocLocaleValid).
-static bool LocalesValid(const mlocLocale* locales, size_t count)
+MLOC_NODISCARD static bool LocalesValid(const mlocLocale* locales, size_t count)
 {
     for (size_t i = 0; i < count; i++)
     {
@@ -147,10 +147,11 @@ mlocResult mlocPrepareMatch(const mlocDataSet* data, const mlocLocale* supported
     return mloc_success;
 }
 
-static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
-                           const mlocMatchEntry* entries, size_t count, const mlocLocale* desired,
-                           size_t desiredCount, const mlocMatchOptions* options,
-                           const mlocMatch* matchOut)
+MLOC_NODISCARD static bool ValidArguments(const mlocDataSet* data, const mlocLocale* supported,
+                                          const mlocMatchEntry* entries, size_t count,
+                                          const mlocLocale* desired, size_t desiredCount,
+                                          const mlocMatchOptions* options,
+                                          const mlocMatch* matchOut)
 {
     if (!mlocValidDataSet(data) || matchOut == nullptr ||
         (count > 0 && (supported == nullptr || entries == nullptr)) ||
@@ -263,7 +264,7 @@ static size_t FieldLength(const char* field, size_t size)
 }
 
 // False for a singleton no locale has.
-static bool Split(const char* tail, size_t size, Parts* parts)
+MLOC_NODISCARD static bool Split(const char* tail, size_t size, Parts* parts)
 {
     *parts = (Parts){.variants = tail};
     size_t length = FieldLength(tail, size);

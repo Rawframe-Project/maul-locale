@@ -12,7 +12,7 @@ bool mlocValidCollationRoot(const DataView* view, DataSpan payload)
 }
 
 // Whether a name is a co value's letters, digits and hyphens.
-static bool NameValid(const uint8_t* name, uint32_t length)
+MLOC_NODISCARD static bool NameValid(const uint8_t* name, uint32_t length)
 {
     bool ok = length > 0 && length <= collationMaxTypeName;
     for (uint32_t i = 0; ok && i < length; i++)
@@ -24,7 +24,8 @@ static bool NameValid(const uint8_t* name, uint32_t length)
 }
 
 // Whether name a sorts before name b: by bytes, a prefix first.
-static bool Before(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
+MLOC_NODISCARD static bool Before(const uint8_t* a, uint32_t aLength, const uint8_t* b,
+                                  uint32_t bLength)
 {
     int c = memcmp(a, b, aLength < bLength ? aLength : bLength);
     return c < 0 || (c == 0 && aLength < bLength);

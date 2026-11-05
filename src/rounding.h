@@ -27,7 +27,7 @@ RoundingUnsigned mlocUnsignedRoundingMode(mlocRoundingMode mode, bool negative);
 // ApplyUnsignedRoundingMode for x = r1 + (r2 - r1) * part / whole, with
 // 0 <= part < whole: whether x rounds to r2. evenLow says whether r1 is
 // an even multiple of the step, for half-even.
-bool mlocRoundsUp(int64_t part, int64_t whole, RoundingUnsigned mode, bool evenLow);
+MLOC_NODISCARD bool mlocRoundsUp(int64_t part, int64_t whole, RoundingUnsigned mode, bool evenLow);
 
 // RoundNumberToIncrement with a mode, signed.
 int64_t mlocRoundToIncrement(int64_t value, int64_t increment, mlocRoundingMode mode);

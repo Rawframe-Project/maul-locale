@@ -13,7 +13,8 @@
 // A currency's symbol in a locale, as mlocGetCurrencySymbol finds it for
 // mloc_currencySymbol: its text in the data, however long; false when
 // the code is not three letters or the locale's chain gives no symbol.
-bool mlocFindCurrencySymbol(const mlocDataSet* data, const mlocLocale* locale, const char* code,
-                            size_t codeLength, const char** textOut, size_t* lengthOut);
+MLOC_NODISCARD bool mlocFindCurrencySymbol(const mlocDataSet* data, const mlocLocale* locale,
+                                           const char* code, size_t codeLength,
+                                           const char** textOut, size_t* lengthOut);
 
 #endif

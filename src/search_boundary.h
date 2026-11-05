@@ -17,12 +17,14 @@
 
 #include "nfd_stream.h"
 
+#include "maul-locale/base.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
 // Whether a code point boundary of the text is a grapheme cluster
 // boundary; the text's start and end are.
-bool mlocSearchIsBoundary(NfdText text, size_t at);
+MLOC_NODISCARD bool mlocSearchIsBoundary(NfdText text, size_t at);
 
 // The first grapheme cluster boundary after a code point boundary, or
 // the text's length when none is.

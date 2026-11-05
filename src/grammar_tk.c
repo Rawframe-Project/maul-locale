@@ -146,8 +146,8 @@ static char Voiced(const uint8_t* word, size_t length, uint32_t last)
 // a word of two syllables or more, or the t of -abat, is voiced
 // (kitaby, Aşgabada), in names too. No dictionary of the words that
 // keep a stop (tarapy) is free to use.
-static bool TurkmenStem(const uint8_t* word, size_t length, uint8_t marks, TurkicSuffixes* suffixes,
-                        TurkicStem* out)
+MLOC_NODISCARD static bool TurkmenStem(const uint8_t* word, size_t length, uint8_t marks,
+                                       TurkicSuffixes* suffixes, TurkicStem* out)
 {
     (void)marks;
     if (!suffixes->vowelFirst)

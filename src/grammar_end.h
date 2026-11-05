@@ -79,32 +79,32 @@ static inline muniGeneralCategory CategoryOf(uint32_t c)
                                   : muniGetGeneralCategory(c);
 }
 
-static inline bool IsLetterCategory(muniGeneralCategory g)
+MLOC_NODISCARD static inline bool IsLetterCategory(muniGeneralCategory g)
 {
     return g == muni_gcLu || g == muni_gcLl || g == muni_gcLt || g == muni_gcLm || g == muni_gcLo ||
            g == muni_gcMn || g == muni_gcMc;
 }
 
-static inline bool IsLetter(uint32_t c)
+MLOC_NODISCARD static inline bool IsLetter(uint32_t c)
 {
     return IsLetterCategory(CategoryOf(c));
 }
 
-static inline bool IsDigit(uint32_t c)
+MLOC_NODISCARD static inline bool IsDigit(uint32_t c)
 {
     return c >= '0' && c <= '9';
 }
 
 // A closing quotation mark or bracket: what TDK writes suffixes after
 // without an apostrophe.
-static inline bool IsCloser(uint32_t c)
+MLOC_NODISCARD static inline bool IsCloser(uint32_t c)
 {
     muniGeneralCategory g = CategoryOf(c);
     return g == muni_gcPe || g == muni_gcPf || c == '"' || c == '\'';
 }
 
 // The separators a written number holds between its digits.
-static inline bool IsNumberSeparator(uint32_t c)
+MLOC_NODISCARD static inline bool IsNumberSeparator(uint32_t c)
 {
     return c == '.' || c == ',' || c == 0xA0 || c == 0x202F || c == '\'';
 }
@@ -157,8 +157,8 @@ static inline size_t WordStart(const uint8_t* text, size_t end, bool* capitalsOu
 
 // Finds and classifies a text's end; false when nothing ends it that can
 // be read.
-static inline bool FindEnd(bool periodOrdinals, const uint8_t* text, size_t length,
-                           mlocInflectionReading reading, End* out)
+MLOC_NODISCARD static inline bool FindEnd(bool periodOrdinals, const uint8_t* text, size_t length,
+                                          mlocInflectionReading reading, End* out)
 {
     *out = (End){0};
     size_t end = length;

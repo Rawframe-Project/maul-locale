@@ -70,12 +70,12 @@ static Text LabelText(const IndexText* t, uint8_t* scratch)
     return text;
 }
 
-static bool Starts(Text t, const uint8_t* bytes)
+MLOC_NODISCARD static bool Starts(Text t, const uint8_t* bytes)
 {
     return t.length >= 3 && memcmp(t.bytes, bytes, 3) == 0;
 }
 
-static bool Ends(Text t, const uint8_t* bytes)
+MLOC_NODISCARD static bool Ends(Text t, const uint8_t* bytes)
 {
     return t.length >= 3 && memcmp(t.bytes + t.length - 3, bytes, 3) == 0;
 }
@@ -100,7 +100,7 @@ static uint32_t CodePoints(Text t)
 
 // ICU4C's hasMultiplePrimaryWeights: more than one primary above the
 // variable top (0 when not shifted) in the text's elements.
-static bool MultiPrimary(const Build* b, Text t)
+MLOC_NODISCARD static bool MultiPrimary(const Build* b, Text t)
 {
     CollationIterator it;
     mlocCollationIteratorStartText(&it, &b->c->root, mlocNfdUtf8(t.bytes, t.length));
@@ -161,7 +161,7 @@ static int Ordered(const Build* b, const IndexText* x, const IndexText* y)
 
 // firstCharsInScripts_: sorted by the collator, stably (each inserted
 // after those equal to it), the leading primary-ignorable ones dropped.
-static bool SortScripts(Build* b)
+MLOC_NODISCARD static bool SortScripts(Build* b)
 {
     IndexCandidates* in = b->in;
     for (uint32_t i = 0; i < in->scriptCount; i++)
@@ -214,7 +214,7 @@ static Text Separated(Text t, uint8_t* scratch)
     return (Text){scratch, length};
 }
 
-static bool Nfkd(Text t, uint8_t* scratch, Text* out)
+MLOC_NODISCARD static bool Nfkd(Text t, uint8_t* scratch, Text* out)
 {
     size_t needed = 0;
     muniTextResult r = muniNormalize((const char*)t.bytes, t.length, muni_nfkd, muni_convertStrict,
@@ -227,7 +227,7 @@ static bool Nfkd(Text t, uint8_t* scratch, Text* out)
 // level: fewer code points in NFKD, then NFKD's code point order, then
 // their own. False with the place's label kept when the NFKD does not
 // fit (labels the data holds are far shorter).
-static bool Better(Text one, Text other)
+MLOC_NODISCARD static bool Better(Text one, Text other)
 {
     uint8_t a[scratchBytes];
     uint8_t c[scratchBytes];
@@ -249,7 +249,8 @@ static bool Better(Text one, Text other)
 
 // ICU4C's binarySearch over the sorted labels: true with the place of
 // one equal to the text, else false with where to insert it.
-static bool Search(const Build* b, uint32_t size, const IndexText* t, uint32_t* placeOut)
+MLOC_NODISCARD static bool Search(const Build* b, uint32_t size, const IndexText* t,
+                                  uint32_t* placeOut)
 {
     uint32_t start = 0;
     uint32_t limit = size;
@@ -275,7 +276,7 @@ static bool Search(const Build* b, uint32_t size, const IndexText* t, uint32_t* 
     return false;
 }
 
-static bool Multiple(const IndexText* t)
+MLOC_NODISCARD static bool Multiple(const IndexText* t)
 {
     if (t->first != 0)
     {
@@ -289,7 +290,7 @@ static bool Multiple(const IndexText* t)
 
 // The label ends in one "*" (a multi-code-point label's mark that it is
 // kept though it sorts as its parts).
-static bool Starred(const IndexText* t)
+MLOC_NODISCARD static bool Starred(const IndexText* t)
 {
     // Only a label of more than one code point is asked.
     MLOC_ASSERT(t->length >= (t->first != 0 ? 1u : 2u));
@@ -306,7 +307,8 @@ static bool Starred(const IndexText* t)
 // Whether a candidate is kept, as initLabels keeps one: within the
 // scripts, and sorting apart from its parts unless starred (the star
 // dropped from the label). Its key is set.
-static bool Keep(const Build* b, IndexText* item, const IndexText* first, const IndexText* last)
+MLOC_NODISCARD static bool Keep(const Build* b, IndexText* item, const IndexText* first,
+                                const IndexText* last)
 {
     bool distinct = false;
     if (Multiple(item))

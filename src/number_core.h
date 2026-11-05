@@ -97,8 +97,9 @@ mlocResult mlocInitNumberCore(NumberCore* coreOut, const mlocDataSet* data,
 // The ten digits of a numbering system by its id ("hanidec"), numberDigitSize
 // bytes apart, and their length; false for a system without digits or
 // data without the number systems.
-bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t length,
-                            uint8_t digits[10 * numberDigitSize], uint8_t* lengthOut);
+MLOC_NODISCARD bool mlocNumberSystemDigits(const mlocDataSet* data, const char* id, size_t length,
+                                           uint8_t digits[10 * numberDigitSize],
+                                           uint8_t* lengthOut);
 
 // As mlocInitNumberCore, for compact notation: also the system's compact
 // table of a length (long when longLength) and the compact patterns,
@@ -146,12 +147,13 @@ mlocResult mlocInitCurrencyCore(NumberCore* coreOut, const mlocDataSet* data,
 
 // Points a core's pattern at a pattern of a valid patterns unit; false
 // for an index past its records.
-bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index);
+MLOC_NODISCARD bool mlocUseNumberPattern(NumberCore* core, DataSpan patterns, uint32_t index);
 
 // Points a core's affixes at a compact pattern of a valid compact
 // patterns unit, keeping the decimal pattern's grouping, as ICU does;
 // returns whether the pattern writes no digits.
-bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns, uint32_t index);
+MLOC_NODISCARD bool mlocUseCompactPattern(NumberCore* core, const uint8_t* patterns,
+                                          uint32_t index);
 
 // The sign a rounded decimal shows under a sign display.
 NumberSign mlocNumberSign(const mlocDecimal* decimal, mlocSignDisplay display);

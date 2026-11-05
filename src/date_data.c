@@ -36,7 +36,7 @@ static const uint64_t s_timeLetters = LETTER('h') | LETTER('H') | LETTER('K') | 
                                       LETTER('m') | LETTER('s') | LETTER('a') | LETTER('b') |
                                       LETTER('B');
 
-static bool InLetters(uint64_t letters, uint8_t c)
+MLOC_NODISCARD static bool InLetters(uint64_t letters, uint8_t c)
 {
     return c >= 'A' && c <= 'z' && (letters >> (c - 'A') & 1) != 0;
 }
@@ -105,7 +105,7 @@ enum
 
 // The section offsets of a patterns unit (its sections, then the text),
 // and whether its counts end at its size.
-static bool Layout(DataSpan unit, uint32_t out[dateSectionCount + 1])
+MLOC_NODISCARD static bool Layout(DataSpan unit, uint32_t out[dateSectionCount + 1])
 {
     static const uint32_t s_sizes[dateSectionCount] = {
         dateRowSize,          dateSetSize,         dateTimeSetSize,      dateIntervalSetSize,
@@ -160,7 +160,7 @@ DatePatterns mlocReadDatePatterns(DataSpan unit)
     return p;
 }
 
-static bool ValidIndexes(const uint8_t* bytes, uint32_t count, uint32_t limit)
+MLOC_NODISCARD static bool ValidIndexes(const uint8_t* bytes, uint32_t count, uint32_t limit)
 {
     for (uint32_t i = 0; i < count; i++)
     {
@@ -173,7 +173,7 @@ static bool ValidIndexes(const uint8_t* bytes, uint32_t count, uint32_t limit)
 }
 
 // Whether time set flags name only known bits, each month code 0 to 2.
-static bool ValidTimeFlags(uint32_t flags)
+MLOC_NODISCARD static bool ValidTimeFlags(uint32_t flags)
 {
     for (uint32_t length = 0; length < dateLengthCount; length++)
     {
@@ -187,8 +187,9 @@ static bool ValidTimeFlags(uint32_t flags)
 
 // Whether each record of a section holds, from a byte offset, values
 // u16 indexes below their limits: the i-th below limits[i % groups].
-static bool ValidGroups(const uint8_t* records, uint32_t recordCount, uint32_t size,
-                        uint32_t offset, uint32_t values, const uint32_t* limits, uint32_t groups)
+MLOC_NODISCARD static bool ValidGroups(const uint8_t* records, uint32_t recordCount, uint32_t size,
+                                       uint32_t offset, uint32_t values, const uint32_t* limits,
+                                       uint32_t groups)
 {
     for (uint32_t r = 0; r < recordCount; r++)
     {
@@ -206,8 +207,9 @@ static bool ValidGroups(const uint8_t* records, uint32_t recordCount, uint32_t s
 
 // Whether each record holds u16 pattern indexes or none, then flags with
 // no bit from a shift up.
-static bool ValidPatternsOrNone(const uint8_t* records, uint32_t recordCount, uint32_t size,
-                                uint32_t values, uint32_t patterns, uint32_t shift)
+MLOC_NODISCARD static bool ValidPatternsOrNone(const uint8_t* records, uint32_t recordCount,
+                                               uint32_t size, uint32_t values, uint32_t patterns,
+                                               uint32_t shift)
 {
     for (uint32_t r = 0; r < recordCount; r++)
     {
@@ -229,7 +231,7 @@ static bool ValidPatternsOrNone(const uint8_t* records, uint32_t recordCount, ui
 }
 
 // Whether a pattern's text holds a value's slot ("{0}" or "{1}").
-static bool HoldsSlot(DataSpan pattern, char slot)
+MLOC_NODISCARD static bool HoldsSlot(DataSpan pattern, char slot)
 {
     for (uint32_t at = 0; at + 3 <= pattern.size; at++)
     {
@@ -243,7 +245,7 @@ static bool HoldsSlot(DataSpan pattern, char slot)
 }
 
 // Whether each interval set's fallback holds both values' slots.
-static bool ValidFallbacks(const DatePatterns* p)
+MLOC_NODISCARD static bool ValidFallbacks(const DatePatterns* p)
 {
     for (uint32_t r = 0; r < p->intervalSetCount; r++)
     {
@@ -260,7 +262,7 @@ static bool ValidFallbacks(const DatePatterns* p)
 
 // Whether each pair's halves are patterns or none, a first half never
 // without its second, and its flags have a bit per difference at most.
-static bool ValidPairs(const DatePatterns* p)
+MLOC_NODISCARD static bool ValidPairs(const DatePatterns* p)
 {
     if (!ValidPatternsOrNone(p->pairs, p->pairCount, dateIntervalPairSize, 2 * dateIntervalFields,
                              p->patternCount, dateIntervalFields))
@@ -320,7 +322,7 @@ static void ReadKinds(const DatePatterns* p, uint32_t first, PatternKinds* k)
 
 // Whether a pattern index is none, outside the window, or a pattern the
 // side's writer takes.
-static bool KindOrNone(const PatternKinds* k, uint32_t index, bool time)
+MLOC_NODISCARD static bool KindOrNone(const PatternKinds* k, uint32_t index, bool time)
 {
     if (index == dateIntervalNone || index < k->first || index - k->first >= kindWindow)
     {
@@ -332,7 +334,8 @@ static bool KindOrNone(const PatternKinds* k, uint32_t index, bool time)
 }
 
 // Whether a run of pattern indexes are each none or of a side's writer.
-static bool KindsOrNone(const PatternKinds* k, const uint8_t* indexes, uint32_t count, bool time)
+MLOC_NODISCARD static bool KindsOrNone(const PatternKinds* k, const uint8_t* indexes,
+                                       uint32_t count, bool time)
 {
     for (uint32_t i = 0; i < count; i++)
     {
@@ -388,8 +391,8 @@ static void PairSpans(const DatePatterns* p, uint32_t* dateMost, uint32_t* timeL
 
 // Whether each pair holds only patterns of the sides whose spans it lies
 // in, and each prefix only date patterns.
-static bool WritablePairs(const DatePatterns* p, const PatternKinds* k, uint32_t dateMost,
-                          uint32_t timeLeast)
+MLOC_NODISCARD static bool WritablePairs(const DatePatterns* p, const PatternKinds* k,
+                                         uint32_t dateMost, uint32_t timeLeast)
 {
     for (uint32_t pair = 0; pair < p->pairCount; pair++)
     {
@@ -413,7 +416,7 @@ static bool WritablePairs(const DatePatterns* p, const PatternKinds* k, uint32_t
 
 // Whether the formats' own patterns are their writers': a date part's of
 // dates and a time part's of times; and each set's short dates dates.
-static bool WritableOwn(const DatePatterns* p, const PatternKinds* k)
+MLOC_NODISCARD static bool WritableOwn(const DatePatterns* p, const PatternKinds* k)
 {
     enum
     {
@@ -454,7 +457,7 @@ static bool WritableOwn(const DatePatterns* p, const PatternKinds* k)
 
 // Whether every interval pattern is one its writer takes, a window of
 // patterns' kinds at a time.
-static bool WritableIntervals(const DatePatterns* p)
+MLOC_NODISCARD static bool WritableIntervals(const DatePatterns* p)
 {
     uint32_t dateMost = 0;
     uint32_t timeLeast = 0;
@@ -477,7 +480,7 @@ static bool WritableIntervals(const DatePatterns* p)
 // the formats' pairs and patterns, prefixes and pairs their patterns or
 // none (ValidPairs), each fallback both values, and each pattern one its
 // writer takes, so that a formatter need not check the patterns it keeps.
-static bool ValidIntervals(const DatePatterns* p)
+MLOC_NODISCARD static bool ValidIntervals(const DatePatterns* p)
 {
     enum
     {
@@ -554,7 +557,7 @@ bool mlocValidDatePatterns(const DataView* view, DataSpan payload)
 
 // The section offsets of a names unit (lists, items, sets, rules, text),
 // and whether its counts end at its size.
-static bool NamesLayout(DataSpan unit, uint32_t out[5])
+MLOC_NODISCARD static bool NamesLayout(DataSpan unit, uint32_t out[5])
 {
     if (unit.size < dateNamesHeaderSize)
     {
@@ -622,7 +625,7 @@ DataSpan mlocDateName(const DateNameTables* t, DateNameList list, uint32_t item)
 }
 
 // Whether offsets (u32, count + 1) run from 0 up to end without falling.
-static bool Ascending(const uint8_t* offsets, uint32_t count, uint32_t end)
+MLOC_NODISCARD static bool Ascending(const uint8_t* offsets, uint32_t count, uint32_t end)
 {
     uint32_t previous = 0;
     for (uint32_t i = 0; i <= count; i++)
@@ -640,7 +643,7 @@ static bool Ascending(const uint8_t* offsets, uint32_t count, uint32_t end)
 // Whether a list's size suits its kind. A leap month pattern's "{0}" is
 // checked where it is used: checking it here would scan a list again for
 // every set that names it.
-static bool ValidList(uint32_t kind, DateNameList list)
+MLOC_NODISCARD static bool ValidList(uint32_t kind, DateNameList list)
 {
     switch (kind)
     {
@@ -663,7 +666,7 @@ static bool ValidList(uint32_t kind, DateNameList list)
 
 // Whether day period rules give each hour am, pm or a flexible period
 // (noon and midnight are named only at their instant) and known flags.
-static bool ValidRules(const uint8_t* rules, uint32_t count)
+MLOC_NODISCARD static bool ValidRules(const uint8_t* rules, uint32_t count)
 {
     for (uint32_t r = 0; r < count; r++)
     {
@@ -731,8 +734,8 @@ bool mlocValidDates(const DataView* view, DataSpan payload)
 
 // A locale's dates unit along its main chain, and the unit of no locale
 // of a kind beside it.
-static bool FindDates(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                      DataSpan* unit, const uint8_t** dates)
+MLOC_NODISCARD static bool FindDates(const mlocDataSet* data, const mlocLocale* locale,
+                                     uint32_t kind, DataSpan* unit, const uint8_t** dates)
 {
     DataSpan found;
     bool fellBack = false;
@@ -749,8 +752,8 @@ static bool FindDates(const mlocDataSet* data, const mlocLocale* locale, uint32_
 
 // The record a locale's dates unit indexes at a u16: false past its
 // section of records.
-static bool RecordOf(const uint8_t* dates, uint32_t at, const uint8_t* section, uint32_t count,
-                     uint32_t size, const uint8_t** record)
+MLOC_NODISCARD static bool RecordOf(const uint8_t* dates, uint32_t at, const uint8_t* section,
+                                    uint32_t count, uint32_t size, const uint8_t** record)
 {
     uint32_t index = mlocLoad16(dates + 2 * (size_t)at);
     if (index >= count)
@@ -823,8 +826,8 @@ bool mlocDayPeriodRulesOf(const DateUnits* u, const uint8_t** rules)
 
 // The units of a locale's dates beside a unit of one kind, found along
 // its main chain.
-static bool FindDatesOf(const mlocDataSet* data, const mlocLocale* locale, uint32_t kind,
-                        DateUnits* u)
+MLOC_NODISCARD static bool FindDatesOf(const mlocDataSet* data, const mlocLocale* locale,
+                                       uint32_t kind, DateUnits* u)
 {
     DataSpan unit;
     memset(u, 0, sizeof(*u));

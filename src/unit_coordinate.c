@@ -18,7 +18,7 @@
 #include <string.h>
 
 // Whether a parsed unit is an angle: its dimensions are a degree's.
-static bool IsAngle(const UnitTable* t, const UnitId* id)
+MLOC_NODISCARD static bool IsAngle(const UnitTable* t, const UnitId* id)
 {
     UnitId degree;
     UnitScale angle;

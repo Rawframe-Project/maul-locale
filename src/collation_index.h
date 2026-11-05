@@ -36,11 +36,12 @@ MLOC_NODISCARD bool mlocValidIndexLabels(const DataView* view, DataSpan payload)
 // The labels of a locale along its main chain. False when no step has
 // a unit (data without the collation file), or when the chain needs the
 // parents table and the data has none.
-bool mlocFindIndexLabels(const mlocDataSet* data, const mlocLocale* locale, IndexLabels* out);
+MLOC_NODISCARD bool mlocFindIndexLabels(const mlocDataSet* data, const mlocLocale* locale,
+                                        IndexLabels* out);
 
 // The label at a place in the unit (4 for the first) and the place
 // after it; false past the last.
-bool mlocNextIndexLabel(const IndexLabels* labels, uint32_t* at, const uint8_t** textOut,
-                        uint32_t* lengthOut);
+MLOC_NODISCARD bool mlocNextIndexLabel(const IndexLabels* labels, uint32_t* at,
+                                       const uint8_t** textOut, uint32_t* lengthOut);
 
 #endif

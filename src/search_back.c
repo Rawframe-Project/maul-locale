@@ -21,7 +21,7 @@ void mlocSearchBackStart(SearchBack* b, const CollationRoot* root,
 
 // The previous raw half, reading the piece before when this one is
 // spent; false at the text's start or when a piece does not fit.
-static bool PreviousHalf(SearchBack* b, SearchHalf* out)
+MLOC_NODISCARD static bool PreviousHalf(SearchBack* b, SearchHalf* out)
 {
     while (b->halfCount == 0)
     {

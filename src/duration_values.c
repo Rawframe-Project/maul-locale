@@ -26,7 +26,7 @@ static const uint64_t s_timeLimit[4] = {UINT64_C(104249991374), UINT64_C(2501999
                                         UINT64_C(150119987579016), UINT64_C(9007199254740991)};
 static const uint64_t s_unitSeconds[4] = {86400, 3600, 60, 1};
 
-static bool IsZero(Wide v)
+MLOC_NODISCARD static bool IsZero(Wide v)
 {
     return v.high == 0 && v.low == 0;
 }
@@ -40,7 +40,7 @@ static Wide Limit(void)
 // The nanoseconds of days to seconds (each checked against its limit)
 // with milliseconds, microseconds and nanoseconds, all of one sign; false
 // when they reach 2^53 seconds.
-static bool Total(const Wide* f, Wide* totalOut)
+MLOC_NODISCARD static bool Total(const Wide* f, Wide* totalOut)
 {
     uint64_t seconds = 0;
     for (int i = 0; i < 4; i += 1)
@@ -67,7 +67,8 @@ static bool Total(const Wide* f, Wide* totalOut)
 // Reads the fields as magnitudes, their sign, and the time's total in
 // nanoseconds, as IsValidDuration checks them; false for a duration it
 // refuses.
-static bool ReadValid(const mlocDurationValues* values, Wide* f, int* signOut, Wide* total)
+MLOC_NODISCARD static bool ReadValid(const mlocDurationValues* values, Wide* f, int* signOut,
+                                     Wide* total)
 {
     const double given[fieldCount] = {
         values->years,        values->months,     values->weeks,   values->days,
@@ -159,7 +160,7 @@ static Wide Rounded(Wide v)
 }
 
 // The record's one sign, or false for two.
-static bool RecordSign(const mlocDateTimeDuration* duration, int* signOut)
+MLOC_NODISCARD static bool RecordSign(const mlocDateTimeDuration* duration, int* signOut)
 {
     const mlocDateDuration* date = &duration->date;
     int64_t fields[5] = {date->years, date->months, date->weeks, date->days,

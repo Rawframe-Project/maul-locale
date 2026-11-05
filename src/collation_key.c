@@ -101,7 +101,7 @@ static void Open(Stream* s, const CollationRoot* root, const CollationSettings* 
 }
 
 // The next element and whether it is variable; false after noElement.
-static bool Next(Stream* s, uint64_t* elementOut, bool* variable)
+MLOC_NODISCARD static bool Next(Stream* s, uint64_t* elementOut, bool* variable)
 {
     for (;;)
     {

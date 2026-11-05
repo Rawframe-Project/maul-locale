@@ -47,7 +47,7 @@ static int64_t FloorMod(int64_t a, int64_t b)
     return a - FloorDiv(a, b) * b;
 }
 
-static bool NonLeapPersian(int64_t year)
+MLOC_NODISCARD static bool NonLeapPersian(int64_t year)
 {
     size_t low = 0;
     size_t high = sizeof(s_nonLeap) / sizeof(s_nonLeap[0]);
@@ -66,7 +66,7 @@ static bool NonLeapPersian(int64_t year)
     return low < sizeof(s_nonLeap) / sizeof(s_nonLeap[0]) && s_nonLeap[low] == year;
 }
 
-static bool GregorianLeap(int64_t year)
+MLOC_NODISCARD static bool GregorianLeap(int64_t year)
 {
     return FloorMod(year, 4) == 0 && (FloorMod(year, 100) != 0 || FloorMod(year, 400) == 0);
 }

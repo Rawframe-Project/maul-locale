@@ -91,8 +91,8 @@ mlocDecimal mlocSpelloutFromUnsigned(uint64_t n)
 
 // A decimal from digits (most significant first) and the power of the
 // last; false past 40 significant digits or 10^999999.
-static bool Build(mlocDecimal* out, const uint8_t* digits, int count, int64_t exponent,
-                  bool negative)
+MLOC_NODISCARD static bool Build(mlocDecimal* out, const uint8_t* digits, int count,
+                                 int64_t exponent, bool negative)
 {
     int start = 0;
     while (start < count && digits[start] == 0)

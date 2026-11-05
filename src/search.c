@@ -12,7 +12,7 @@
 #include "search_find.h"
 
 // ICU4C's MIGHT_BE_JAMO_L, on a UTF-16 unit.
-static bool MightBeJamoL(uint32_t u)
+MLOC_NODISCARD static bool MightBeJamoL(uint32_t u)
 {
     return (u >= 0x1100 && u <= 0x115E) || (u >= 0x3131 && u <= 0x314E) ||
            (u >= 0x3165 && u <= 0x3186);
@@ -33,7 +33,7 @@ static uint32_t RingSize(const Searcher* s, NfdText pattern)
 }
 
 // The pattern's NFD for the identical check; false when it does not fit.
-static bool PatternNfd(Searcher* s, NfdText pattern)
+MLOC_NODISCARD static bool PatternNfd(Searcher* s, NfdText pattern)
 {
     NfdStream n;
     mlocNfdStartText(&n, pattern);
@@ -130,8 +130,8 @@ mlocResult mlocInitSearcherUtf16(const mlocCollator* collator, const uint16_t* p
 // Whether the pattern's elements match from an index, and where in the
 // text's elements the match ends (one past its last); the text element
 // compared last (searchEnd when none was).
-static bool Match(Find* f, uint32_t index, uint32_t* endOut, uint64_t* lastOut,
-                  uint64_t* patternOut)
+MLOC_NODISCARD static bool Match(Find* f, uint32_t index, uint32_t* endOut, uint64_t* lastOut,
+                                 uint64_t* patternOut)
 {
     int64_t offset = 0;
     const Cei* t = nullptr;
@@ -172,8 +172,8 @@ static bool Match(Find* f, uint32_t index, uint32_t* endOut, uint64_t* lastOut,
 // Where a match may end: the element after it, past the text's
 // ignorables a wildcard comparison takes; false when the match ends
 // inside an expansion or before an ignorable it cannot take.
-static bool After(Find* f, uint32_t index, uint32_t* end, uint64_t pattern, Cei* nextOut,
-                  bool* heldOut)
+MLOC_NODISCARD static bool After(Find* f, uint32_t index, uint32_t* end, uint64_t pattern,
+                                 Cei* nextOut, bool* heldOut)
 {
     if (f->s->comparison == mloc_searchExact)
     {
@@ -240,8 +240,8 @@ static uint32_t Limit(Find* f, const Cei* last, uint32_t minLimit, uint32_t maxL
 
 // Whether the match from an index, its elements matched up to end, has
 // bounds usearch_search accepts; its bounds.
-static bool Bounds(Find* f, uint32_t index, uint32_t end, uint64_t pattern, size_t* startOut,
-                   size_t* endOut)
+MLOC_NODISCARD static bool Bounds(Find* f, uint32_t index, uint32_t end, uint64_t pattern,
+                                  size_t* startOut, size_t* endOut)
 {
     // The elements are copied: fetching more may reuse their places.
     const Cei* held = mlocSearchAt(f, index);

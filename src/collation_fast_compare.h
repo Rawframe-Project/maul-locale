@@ -56,8 +56,9 @@ typedef struct FastLatinOptions
 // when the fast compare cannot serve them: no table, the identical
 // strength, a variable top that ends no group, or a reordering that
 // moves the groups before Latin.
-bool mlocFastLatinOptions(const CollationRoot* root, const CollationSettings* settings,
-                          const uint8_t* table, uint32_t count, FastLatinOptions* out);
+MLOC_NODISCARD bool mlocFastLatinOptions(const CollationRoot* root,
+                                         const CollationSettings* settings, const uint8_t* table,
+                                         uint32_t count, FastLatinOptions* out);
 
 // -1, 0 or 1 as a sorts before, with or after b up to the quaternary
 // level, or fastLatinBail.

@@ -167,12 +167,12 @@ size_t mlocPreparedSize(PreparedKind kind);
 // and selectability cleared), and whether a prepared value, which may be
 // null, was made with a value's options.
 NumberValue mlocNumberKey(const NumberValue* value);
-bool mlocNumberFits(const PreparedNumber* prepared, const NumberValue* value);
+MLOC_NODISCARD bool mlocNumberFits(const PreparedNumber* prepared, const NumberValue* value);
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made (the expression is then not prepared).
-bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data, const mlocLocale* locale,
-                       PreparedNumber* out);
+MLOC_NODISCARD bool mlocPrepareNumber(const NumberValue* value, const mlocDataSet* data,
+                                      const mlocLocale* locale, PreparedNumber* out);
 
 // An option's value as a number function reads it: text (a literal's,
 // a string argument's), or an integer (a numeric argument's or a number
@@ -188,11 +188,11 @@ typedef struct NumberOption
 } NumberOption;
 
 // Whether text matches MF2's number-literal production.
-bool mlocNumberLiteral(const uint8_t* text, size_t length);
+MLOC_NODISCARD bool mlocNumberLiteral(const uint8_t* text, size_t length);
 
 // Whether a decimal (as it formats) is written plainly as a number
 // literal key: no exponent, zero unsigned, the fraction zeros it shows.
-bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length);
+MLOC_NODISCARD bool mlocExactlyKey(const mlocDecimal* rounded, const uint8_t* key, size_t length);
 
 // A number value of a function for a decimal, no option given.
 NumberValue mlocMakeNumberValue(NumberFunction function, const mlocDecimal* decimal);
@@ -214,18 +214,18 @@ void mlocSetCurrencyCode(NumberValue* value, const char* code);
 
 // Whether text is lexically a unit identifier or a usage: lower-case
 // ASCII letters and digits in parts joined by single hyphens.
-bool mlocUnitText(const char* text, size_t length);
+MLOC_NODISCARD bool mlocUnitText(const char* text, size_t length);
 
 // Gives a value its operand's unit (a unit amount's identifier).
 void mlocSetUnit(NumberValue* value, const char* unit, size_t length);
 
 // Finds a currency value's own digits once its code is known: false for
 // data without the currencies' fractions.
-bool mlocFindCurrencyDigits(NumberValue* value, const mlocDataSet* data);
+MLOC_NODISCARD bool mlocFindCurrencyDigits(NumberValue* value, const mlocDataSet* data);
 
 // Rounds a fresh :integer value's decimal to an integer (half-expand).
 // Returns false when rounding passes the decimal's limits.
-bool mlocMakeInteger(NumberValue* value);
+MLOC_NODISCARD bool mlocMakeInteger(NumberValue* value);
 
 // Sets an option the expression gives by name, for the function whose
 // expression it is: mloc_messageFaultNone, also for a name the function
@@ -267,6 +267,7 @@ mlocMessageFaultKind mlocMatchNumber(const NumberValue* value, const PreparedNum
 
 // Whether key1 is a better match than key2, both matching: a number
 // literal over a keyword.
-bool mlocNumberKeyBetter(const uint8_t* key1, size_t length1, const uint8_t* key2, size_t length2);
+MLOC_NODISCARD bool mlocNumberKeyBetter(const uint8_t* key1, size_t length1, const uint8_t* key2,
+                                        size_t length2);
 
 #endif

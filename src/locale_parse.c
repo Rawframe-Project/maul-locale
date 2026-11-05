@@ -46,12 +46,12 @@ static mlocTextResult Result(mlocResult status, size_t offset)
     return (mlocTextResult){status, offset};
 }
 
-static bool IsAlpha(char c)
+MLOC_NODISCARD static bool IsAlpha(char c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-static bool IsDigit(char c)
+MLOC_NODISCARD static bool IsDigit(char c)
 {
     return c >= '0' && c <= '9';
 }
@@ -96,7 +96,7 @@ static mlocTextResult Split(Parser* p, const char* text, size_t length)
     return Result(mloc_success, length);
 }
 
-static bool AllAlpha(const Parser* p, int s)
+MLOC_NODISCARD static bool AllAlpha(const Parser* p, int s)
 {
     for (uint32_t k = 0; k < p->subtags[s].length; k++)
     {
@@ -108,7 +108,7 @@ static bool AllAlpha(const Parser* p, int s)
     return true;
 }
 
-static bool AllDigit(const Parser* p, int s)
+MLOC_NODISCARD static bool AllDigit(const Parser* p, int s)
 {
     for (uint32_t k = 0; k < p->subtags[s].length; k++)
     {
@@ -130,29 +130,29 @@ static uint32_t Length(const Parser* p, int s)
     return p->subtags[s].length;
 }
 
-static bool IsLanguage(const Parser* p, int s)
+MLOC_NODISCARD static bool IsLanguage(const Parser* p, int s)
 {
     uint32_t n = Length(p, s);
     return AllAlpha(p, s) && (n == 2 || n == 3 || n >= 5);
 }
 
-static bool IsScript(const Parser* p, int s)
+MLOC_NODISCARD static bool IsScript(const Parser* p, int s)
 {
     return Length(p, s) == 4 && AllAlpha(p, s);
 }
 
-static bool IsRegion(const Parser* p, int s)
+MLOC_NODISCARD static bool IsRegion(const Parser* p, int s)
 {
     return (Length(p, s) == 2 && AllAlpha(p, s)) || (Length(p, s) == 3 && AllDigit(p, s));
 }
 
-static bool IsVariant(const Parser* p, int s)
+MLOC_NODISCARD static bool IsVariant(const Parser* p, int s)
 {
     return Length(p, s) >= 5 || (Length(p, s) == 4 && IsDigit(At(p, s, 0)));
 }
 
 // Whether subtag s, lowercased, is the given lowercase word.
-static bool Is(const Parser* p, int s, const char* word)
+MLOC_NODISCARD static bool Is(const Parser* p, int s, const char* word)
 {
     if (Length(p, s) != strlen(word))
     {
@@ -250,7 +250,7 @@ static mlocTextResult Variants(Parser* p, int* s)
     return Result(mloc_success, 0);
 }
 
-static bool EndsExtension(const Parser* p, int s)
+MLOC_NODISCARD static bool EndsExtension(const Parser* p, int s)
 {
     return s >= p->count || Length(p, s) == 1;
 }
@@ -430,7 +430,7 @@ typedef struct Writer
     size_t length;
 } Writer;
 
-static bool Put(Writer* w, char c)
+MLOC_NODISCARD static bool Put(Writer* w, char c)
 {
     if (w->length == w->capacity)
     {
@@ -440,7 +440,7 @@ static bool Put(Writer* w, char c)
     return true;
 }
 
-static bool PutSubtag(Writer* w, const Parser* p, int s)
+MLOC_NODISCARD static bool PutSubtag(Writer* w, const Parser* p, int s)
 {
     // The room is checked once for the separator and the whole subtag.
     uint32_t length = Length(p, s);
@@ -463,7 +463,7 @@ static bool PutSubtag(Writer* w, const Parser* p, int s)
 }
 
 // Writes the variants (order[0, variantCount)) and the extensions.
-static bool WriteTail(Parser* p, int variantCount, char* tail, size_t capacity)
+MLOC_NODISCARD static bool WriteTail(Parser* p, int variantCount, char* tail, size_t capacity)
 {
     Writer w = {tail, capacity, 0};
     for (int i = 0; i < variantCount; i++)

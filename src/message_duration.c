@@ -91,7 +91,7 @@ bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out
     return true;
 }
 
-static bool NameIs(const uint8_t* name, size_t length, const char* text)
+MLOC_NODISCARD static bool NameIs(const uint8_t* name, size_t length, const char* text)
 {
     return length == strlen(text) && memcmp(name, text, length) == 0;
 }
@@ -165,7 +165,7 @@ static uint32_t FieldStyles(int field)
 }
 
 // A field's style option, as far as the field takes it.
-static bool SetField(DurationValue* v, int field, const NumberOption* option)
+MLOC_NODISCARD static bool SetField(DurationValue* v, int field, const NumberOption* option)
 {
     int index =
         Choice(option, s_fieldStyles, (int)(sizeof(s_fieldStyles) / sizeof(s_fieldStyles[0])));
@@ -179,7 +179,7 @@ static bool SetField(DurationValue* v, int field, const NumberOption* option)
 }
 
 // A field's display option.
-static bool SetDisplay(DurationValue* v, int field, const NumberOption* option)
+MLOC_NODISCARD static bool SetDisplay(DurationValue* v, int field, const NumberOption* option)
 {
     int index = Choice(option, s_displays, (int)(sizeof(s_displays) / sizeof(s_displays[0])));
     if (index < 0)
@@ -193,8 +193,8 @@ static bool SetDisplay(DurationValue* v, int field, const NumberOption* option)
 
 // The style or the fractional digits; whether the name was either, and
 // in good whether its value was good.
-static bool SetWhole(DurationValue* v, const uint8_t* name, size_t length,
-                     const NumberOption* option, bool* good)
+MLOC_NODISCARD static bool SetWhole(DurationValue* v, const uint8_t* name, size_t length,
+                                    const NumberOption* option, bool* good)
 {
     if (NameIs(name, length, "style"))
     {

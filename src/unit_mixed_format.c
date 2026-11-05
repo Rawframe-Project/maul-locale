@@ -345,7 +345,7 @@ static mlocResult WriteNumeric(const UnitFormat* u, const UnitOutput* o,
 }
 
 // Whether amounts take the numeric width: none negative or not finite.
-static bool NumericAmounts(const UnitOutput* o, const mlocUnitAmounts* amounts)
+MLOC_NODISCARD static bool NumericAmounts(const UnitOutput* o, const mlocUnitAmounts* amounts)
 {
     bool plain = o->numeric != 0;
     for (uint32_t i = 0; i < o->parts; i++)

@@ -14,6 +14,6 @@
 
 // Adds a small integer to a value (:offset), keeping the fraction digits
 // it shows; false when the sum needs more digits than a decimal holds.
-bool mlocOffsetNumber(NumberValue* value, int32_t delta);
+MLOC_NODISCARD bool mlocOffsetNumber(NumberValue* value, int32_t delta);
 
 #endif

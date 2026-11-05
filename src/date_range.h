@@ -68,13 +68,13 @@ void mlocWriteRange(const RangeChoice* c, NumberWriter* w);
 
 // Whether a choice writes two values: a difference with a pair, or one
 // its pattern shows.
-bool mlocRangeWritesTwo(const RangeChoice* c);
+MLOC_NODISCARD bool mlocRangeWritesTwo(const RangeChoice* c);
 
 // The prefixed pattern a date-time's date difference writes (a prefix's
 // pattern for the field the date lacks), and its glue style (0 full to 3
 // short); false where the date shows the field (its own pattern stands).
-bool mlocRangePrefix(const PatternTable* table, const uint8_t* prefix, uint32_t difference,
-                     DataSpan* pattern, uint32_t* style);
+MLOC_NODISCARD bool mlocRangePrefix(const PatternTable* table, const uint8_t* prefix,
+                                    uint32_t difference, DataSpan* pattern, uint32_t* style);
 
 // A value written as a date and a time joined by glue ({1} the date, {0}
 // the time), each part by its pattern and writer.

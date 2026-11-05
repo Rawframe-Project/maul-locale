@@ -175,7 +175,8 @@ static int64_t IsoDay(int64_t year, uint32_t month, uint32_t day)
 
 // The day of the code and day in a year of the calendar, false when the
 // year has no such day.
-static bool DayIn(const CalendarYear* y, uint32_t number, bool leap, uint32_t day, int64_t* out)
+MLOC_NODISCARD static bool DayIn(const CalendarYear* y, uint32_t number, bool leap, uint32_t day,
+                                 int64_t* out)
 {
     uint32_t month = 0;
     if (mlocYearMonthOfCode(y, number, leap, mloc_overflowReject, &month) != mloc_success ||
@@ -189,8 +190,8 @@ static bool DayIn(const CalendarYear* y, uint32_t number, bool leap, uint32_t da
 
 // The latest day from first to last (backward) or the earliest (forward)
 // with the code and day, false for none.
-static bool Search(mlocCalendar calendar, uint32_t number, bool leap, uint32_t day, int64_t first,
-                   int64_t last, bool backward, int64_t* out)
+MLOC_NODISCARD static bool Search(mlocCalendar calendar, uint32_t number, bool leap, uint32_t day,
+                                  int64_t first, int64_t last, bool backward, int64_t* out)
 {
     CalendarYear y;
     mlocYearOpenOf(&y, calendar, (int32_t)(backward ? last : first));

@@ -71,7 +71,7 @@ static int32_t VariantId(const Aliases* aliases, const char* name)
     return -1;
 }
 
-static bool HasVariant(const Ident* ident, uint32_t id)
+MLOC_NODISCARD static bool HasVariant(const Ident* ident, uint32_t id)
 {
     for (int v = 0; v < ident->variantCount; v++)
     {
@@ -85,7 +85,7 @@ static bool HasVariant(const Ident* ident, uint32_t id)
 
 // Whether a rule's type matches, read from its bytes: most rules a key
 // files are tried and fail, so the rest of the rule is not unpacked.
-static bool MatchesAt(const Ident* ident, const uint8_t* r)
+MLOC_NODISCARD static bool MatchesAt(const Ident* ident, const uint8_t* r)
 {
     uint32_t language = mlocLoad16(r + 8);
     uint32_t script = mlocLoad32(r);
@@ -164,7 +164,7 @@ static void RemoveVariant(Ident* ident, int at)
     ident->variantCount--;
 }
 
-static bool AddVariant(Ident* ident, const Aliases* aliases, uint32_t id)
+MLOC_NODISCARD static bool AddVariant(Ident* ident, const Aliases* aliases, uint32_t id)
 {
     if (HasVariant(ident, id))
     {
@@ -213,7 +213,7 @@ static uint32_t PickRegion(const mlocDataSet* data, const Aliases* aliases, cons
 
 // The variants of a rule's Replacement: the type's removed and the
 // replacement's added; false when they do not fit.
-static bool ApplyVariants(const Aliases* aliases, const Rule* rule, Ident* ident)
+MLOC_NODISCARD static bool ApplyVariants(const Aliases* aliases, const Rule* rule, Ident* ident)
 {
     for (uint32_t v = 0; v < rule->typeVariantCount; v++)
     {
@@ -289,7 +289,8 @@ static size_t FieldLength(const char* field, size_t size)
 
 // The ident of a parsed locale; the tail's extensions start at
 // *restOut (or are empty).
-static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ident, size_t* restOut)
+MLOC_NODISCARD static bool ToIdent(const Aliases* aliases, const mlocLocale* locale, Ident* ident,
+                                   size_t* restOut)
 {
     // The variant arrays are filled up to variantCount only, so that the
     // ident is not cleared whole on every call.
@@ -373,7 +374,7 @@ static void WriteFields(const Ident* ident, mlocLocale* locale)
 
 // Writes an ident's variants, sorted, into a locale's tail before the
 // extensions, which start at rest.
-static bool WriteVariants(Ident* ident, size_t rest, mlocLocale* locale)
+MLOC_NODISCARD static bool WriteVariants(Ident* ident, size_t rest, mlocLocale* locale)
 {
     for (int i = 1; i < ident->variantCount; i++)
     {
@@ -477,7 +478,7 @@ mlocResult mlocApplyAliases(const mlocDataSet* data, mlocLocale* locale, uint32_
 }
 
 // Lowercases text into out with "-" for "_"; false when it does not fit.
-static bool Fold(const char* text, size_t length, char* out)
+MLOC_NODISCARD static bool Fold(const char* text, size_t length, char* out)
 {
     if (length >= MAX_TEXT)
     {
@@ -521,7 +522,7 @@ static const char* Legacy(const Aliases* aliases, const char* folded, size_t len
     return nullptr;
 }
 
-static bool IsAlphaRun(const char* text, size_t length)
+MLOC_NODISCARD static bool IsAlphaRun(const char* text, size_t length)
 {
     for (size_t i = 0; i < length; i++)
     {
@@ -582,7 +583,7 @@ static size_t Prepare(const Aliases* aliases, const char* folded, size_t length,
 
 // CLDR's variant POSIX as the keyword -u-va-posix, which UTS #35 makes of
 // it. False when the locale with the keyword does not fit.
-static bool PosixKeyword(mlocLocale* locale, uint32_t* changes)
+MLOC_NODISCARD static bool PosixKeyword(mlocLocale* locale, uint32_t* changes)
 {
     size_t size = FieldLength(locale->tail, sizeof(locale->tail));
     for (size_t at = 0; at < size;)

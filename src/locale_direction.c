@@ -14,7 +14,7 @@
 
 // Whether a script is written right to left: a binary search of the
 // sorted codes.
-static bool RightToLeft(const char script[4])
+MLOC_NODISCARD static bool RightToLeft(const char script[4])
 {
     uint32_t low = 0;
     uint32_t high = mlocRightToLeftScriptCount;

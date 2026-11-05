@@ -19,12 +19,12 @@ UnitId mlocUnitPartOf(const UnitId* mixed, uint32_t i);
 
 // Whether two scales have the same dimensions, or opposite ones
 // (*reciprocalOut then true).
-bool mlocSameDimensions(const UnitScale* a, const UnitScale* b, bool* reciprocalOut);
+MLOC_NODISCARD bool mlocSameDimensions(const UnitScale* a, const UnitScale* b, bool* reciprocalOut);
 
 // A value in a target unit, exactly; false when the integers cannot hold
 // it or the units do not convert.
-bool mlocUnitValueIn(const UnitTable* t, const UnitScale* from, const UnitValue* value,
-                     const UnitScale* to, UnitValue* out);
+MLOC_NODISCARD bool mlocUnitValueIn(const UnitTable* t, const UnitScale* from,
+                                    const UnitValue* value, const UnitScale* to, UnitValue* out);
 
 // Whether a mixed unit's parts convert to each other alone, and the index
 // of its smallest part: mloc_success, or mloc_errorInvalid for parts of

@@ -16,8 +16,8 @@
 // A part's record: its kind among the records (expressions or markups)
 // and its index; false for a part that names none, or an index past
 // them.
-static bool Record(const void* bound, uint32_t part, BoundHeader* h, uint32_t* kindOut,
-                   uint32_t* indexOut)
+MLOC_NODISCARD static bool Record(const void* bound, uint32_t part, BoundHeader* h,
+                                  uint32_t* kindOut, uint32_t* indexOut)
 {
     MessageFormatter formatter;
     if (bound == NULL || !mlocReadBound(bound, h, &formatter))

@@ -64,8 +64,8 @@ MLOC_NODISCARD bool mlocHungarianRequestValid(const mlocInflection* request);
 
 // Writes a request's suffixes on a text's end; false when the spoken
 // form has nothing to read (no letter).
-bool mlocHungarianInflect(const HungarianText* text, const mlocInflection* request,
-                          HungarianForm* out);
+MLOC_NODISCARD bool mlocHungarianInflect(const HungarianText* text, const mlocInflection* request,
+                                         HungarianForm* out);
 
 // The stems the rules cannot tell: a lowering stem (házat), one whose
 // harmony its vowels do not show (hídon), one whose accusative takes a

@@ -38,7 +38,7 @@ static void Store32(uint8_t* p, uint32_t value)
 
 // Whether a function's name is an MF2 identifier with a namespace other
 // than the library's.
-static bool GoodFunctionName(const mlocMessageFunction* function)
+MLOC_NODISCARD static bool GoodFunctionName(const mlocMessageFunction* function)
 {
     const uint8_t* name = (const uint8_t*)function->name;
     size_t length = function->nameLength;
@@ -85,7 +85,7 @@ static bool GoodFunctionName(const mlocMessageFunction* function)
 }
 
 // Whether a zone is one the library made: it has an offset.
-static bool GoodZone(const mlocTimeZone* zone)
+MLOC_NODISCARD static bool GoodZone(const mlocTimeZone* zone)
 {
     mlocInstant epoch = {0, 0};
     int32_t offset = 0;
@@ -94,7 +94,7 @@ static bool GoodZone(const mlocTimeZone* zone)
 
 // Whether the program's functions are well made: each with a resolve
 // entry and a good name, no name twice.
-static bool GoodFunctions(const mlocMessageFunction* functions, size_t count)
+MLOC_NODISCARD static bool GoodFunctions(const mlocMessageFunction* functions, size_t count)
 {
     if ((functions == NULL && count > 0) || count >= messageFunctionLimit)
     {

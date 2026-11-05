@@ -72,7 +72,8 @@ size_t mlocDateDigits(const uint8_t* digits, uint8_t digitLength, uint64_t value
 // Spells a number out into a writer as one part of a kind, whatever its
 // length: in place, into the room the writer has left. False, with
 // nothing written, when the rules cannot write it.
-static bool WriteSpelledOut(const DateFormat* f, uint64_t value, uint32_t kind, NumberWriter* w)
+MLOC_NODISCARD static bool WriteSpelledOut(const DateFormat* f, uint64_t value, uint32_t kind,
+                                           NumberWriter* w)
 {
     mlocDecimal decimal;
     bool room = w->parts == nullptr && w->buffer != nullptr && w->length < w->capacity;
@@ -388,7 +389,7 @@ void mlocWriteDateFieldsIn(const DateFormat* f, const uint8_t* pattern, uint32_t
 }
 
 // Whether a glue's slot, {0} or {1}, starts at a byte.
-static bool IsGlueSlot(const uint8_t* glue, uint32_t length, uint32_t at)
+MLOC_NODISCARD static bool IsGlueSlot(const uint8_t* glue, uint32_t length, uint32_t at)
 {
     return at + 3 <= length && glue[at] == '{' && glue[at + 2] == '}' &&
            (glue[at + 1] == '0' || glue[at + 1] == '1');

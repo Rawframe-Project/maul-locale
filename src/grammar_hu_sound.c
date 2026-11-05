@@ -192,7 +192,7 @@ bool mlocHungarianEndsWith(const HungarianLetters* w, size_t end, const char* s)
 
 // A final y read as the vowel i: not the second letter of gy, ly, ny or
 // ty (Kölcsey, Zichy; Kodály keeps ly).
-static bool YAsI(const HungarianLetters* w, size_t i)
+MLOC_NODISCARD static bool YAsI(const HungarianLetters* w, size_t i)
 {
     if (w->c[i] != 'y' || i + 1 != w->count)
     {
@@ -257,7 +257,7 @@ static const Spelling s_spellings[] = {
     {"w", "v", false},     {"q", "k", false},
 };
 
-static bool IsDirectT(const char* sound)
+MLOC_NODISCARD static bool IsDirectT(const char* sound)
 {
     static const char* const s_direct[] = {"j", "l", "ly", "n", "ny", "r", "s", "sz", "z", "zs"};
     for (size_t i = 0; i < sizeof(s_direct) / sizeof(s_direct[0]); i++)

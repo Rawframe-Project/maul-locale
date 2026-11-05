@@ -40,7 +40,8 @@ UnitTable mlocReadUnitTable(DataSpan unit)
 
 // An identifier's text: an offset and a length within the text, of the
 // characters identifiers use.
-static bool ValidText(const UnitTable* t, uint32_t textSize, const uint8_t* at, uint32_t length)
+MLOC_NODISCARD static bool ValidText(const UnitTable* t, uint32_t textSize, const uint8_t* at,
+                                     uint32_t length)
 {
     uint32_t offset = mlocLoad32(at);
     if (length == 0 || offset > textSize || length > textSize - offset)
@@ -68,8 +69,8 @@ static int CompareText(const UnitTable* t, const uint8_t* at, uint32_t length, c
 }
 
 // Whether records' texts strictly ascend: each against the one before.
-static bool Ascending(const UnitTable* t, const uint8_t* record, const uint8_t* previous,
-                      uint32_t lengthAt)
+MLOC_NODISCARD static bool Ascending(const UnitTable* t, const uint8_t* record,
+                                     const uint8_t* previous, uint32_t lengthAt)
 {
     return previous == nullptr ||
            CompareText(t, previous, previous[lengthAt], (const char*)t->text + mlocLoad32(record),
@@ -78,7 +79,8 @@ static bool Ascending(const UnitTable* t, const uint8_t* record, const uint8_t* 
 
 // Reads a number at *at, advancing past it; false when it does not lie
 // within the numbers or is not in its shortest form.
-static bool ReadNumber(const uint8_t* numbers, uint32_t size, uint32_t* at, Wide* out)
+MLOC_NODISCARD static bool ReadNumber(const uint8_t* numbers, uint32_t size, uint32_t* at,
+                                      Wide* out)
 {
     if (*at >= size)
     {
@@ -104,7 +106,7 @@ static bool ReadNumber(const uint8_t* numbers, uint32_t size, uint32_t* at, Wide
     return true;
 }
 
-static bool ValidFactor(const UnitTable* t, uint32_t numbersSize, const uint8_t* s)
+MLOC_NODISCARD static bool ValidFactor(const UnitTable* t, uint32_t numbersSize, const uint8_t* s)
 {
     uint32_t at = mlocLoad32(s + simpleFactor);
     Wide n;
@@ -127,7 +129,7 @@ static bool ValidFactor(const UnitTable* t, uint32_t numbersSize, const uint8_t*
     return true;
 }
 
-static bool ValidSimples(const UnitTable* t, uint32_t textSize, uint32_t numbersSize)
+MLOC_NODISCARD static bool ValidSimples(const UnitTable* t, uint32_t textSize, uint32_t numbersSize)
 {
     const uint8_t* previous = nullptr;
     for (uint32_t i = 0; i < t->simpleCount; i++)
@@ -148,7 +150,7 @@ static bool ValidSimples(const UnitTable* t, uint32_t textSize, uint32_t numbers
     return true;
 }
 
-static bool ValidPrefixes(const UnitTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidPrefixes(const UnitTable* t, uint32_t textSize)
 {
     const uint8_t* previous = nullptr;
     for (uint32_t i = 0; i < t->prefixCount; i++)
@@ -166,7 +168,7 @@ static bool ValidPrefixes(const UnitTable* t, uint32_t textSize)
     return true;
 }
 
-static bool ValidAliases(const UnitTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidAliases(const UnitTable* t, uint32_t textSize)
 {
     const uint8_t* previous = nullptr;
     for (uint32_t i = 0; i < t->aliasCount; i++)
@@ -183,7 +185,7 @@ static bool ValidAliases(const UnitTable* t, uint32_t textSize)
 }
 
 // Whether exponents past the dimension count are 0.
-static bool ValidExponents(const UnitTable* t, const uint8_t* exponents)
+MLOC_NODISCARD static bool ValidExponents(const UnitTable* t, const uint8_t* exponents)
 {
     for (uint32_t d = t->dimensionCount; d < unitMaxDimensions; d++)
     {
@@ -195,7 +197,7 @@ static bool ValidExponents(const UnitTable* t, const uint8_t* exponents)
     return true;
 }
 
-static bool ValidBases(const UnitTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidBases(const UnitTable* t, uint32_t textSize)
 {
     for (uint32_t i = 0; i < t->baseCount; i++)
     {
@@ -209,7 +211,7 @@ static bool ValidBases(const UnitTable* t, uint32_t textSize)
     return true;
 }
 
-static bool ValidDimensions(const UnitTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidDimensions(const UnitTable* t, uint32_t textSize)
 {
     for (uint32_t i = 0; i < t->dimensionCount; i++)
     {
@@ -222,7 +224,7 @@ static bool ValidDimensions(const UnitTable* t, uint32_t textSize)
     return true;
 }
 
-static bool ValidQuantities(const UnitTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidQuantities(const UnitTable* t, uint32_t textSize)
 {
     for (uint32_t i = 0; i < t->quantityCount; i++)
     {
@@ -237,7 +239,7 @@ static bool ValidQuantities(const UnitTable* t, uint32_t textSize)
     return true;
 }
 
-static bool ValidBeaufort(const UnitTable* t)
+MLOC_NODISCARD static bool ValidBeaufort(const UnitTable* t)
 {
     for (uint32_t i = 1; i < t->beaufortCount; i++)
     {
@@ -394,8 +396,8 @@ UnitPrefsTable mlocReadUnitPrefs(DataSpan unit)
 }
 
 // A preference text: within the text, of identifier characters.
-static bool ValidPrefText(const UnitPrefsTable* t, uint32_t textSize, const uint8_t* at,
-                          uint32_t length)
+MLOC_NODISCARD static bool ValidPrefText(const UnitPrefsTable* t, uint32_t textSize,
+                                         const uint8_t* at, uint32_t length)
 {
     UnitTable view = {.text = t->text};
     return ValidText(&view, textSize, at, length);
@@ -409,7 +411,7 @@ static int CompareSets(const UnitPrefsTable* t, const uint8_t* set, const char* 
     return c != 0 || usage == nullptr ? c : CompareText(&view, set + 4, set[9], usage, usageLength);
 }
 
-static bool ValidSets(const UnitPrefsTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidSets(const UnitPrefsTable* t, uint32_t textSize)
 {
     uint32_t nextRun = 0;
     for (uint32_t i = 0; i < t->setCount; i++)
@@ -445,13 +447,13 @@ static bool ValidSets(const UnitPrefsTable* t, uint32_t textSize)
     return nextRun == t->runCount;
 }
 
-static bool ValidIncrement(uint32_t n)
+MLOC_NODISCARD static bool ValidIncrement(uint32_t n)
 {
     return n == 0 || n == 1 || n == 2 || n == 5 || n == 10 || n == 20 || n == 25 || n == 50 ||
            n == 100;
 }
 
-static bool ValidRuns(const UnitPrefsTable* t, uint32_t textSize)
+MLOC_NODISCARD static bool ValidRuns(const UnitPrefsTable* t, uint32_t textSize)
 {
     for (uint32_t r = 0; r < t->runCount; r++)
     {

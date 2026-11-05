@@ -14,7 +14,7 @@
 #include <stddef.h>
 
 // Whether an identifier names a mixed unit (its parts joined by "-and-").
-bool mlocIsMixedUnit(const char* unit, size_t length);
+MLOC_NODISCARD bool mlocIsMixedUnit(const char* unit, size_t length);
 
 // Fills an output unit of a mixed unit whose identifier out->id holds,
 // parsed from the text: each part's patterns in the slots from *slots on

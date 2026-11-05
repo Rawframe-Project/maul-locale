@@ -62,19 +62,20 @@ typedef struct PreparedDuration
 } PreparedDuration;
 
 // Whether a duration argument's fields are a duration the library makes.
-bool mlocGoodDuration(const mlocDurationValues* values);
+MLOC_NODISCARD bool mlocGoodDuration(const mlocDurationValues* values);
 
 // A duration value of fields, no option given.
 DurationValue mlocMakeDurationValue(const mlocDurationValues* values);
 
 // Reads an ISO 8601 duration literal (or string argument) as
 // mlocParseDuration reads it; false for anything else.
-bool mlocDurationLiteral(const uint8_t* text, size_t length, mlocDurationValues* out);
+MLOC_NODISCARD bool mlocDurationLiteral(const uint8_t* text, size_t length,
+                                        mlocDurationValues* out);
 
 // A number of seconds as a duration balanced up to hours, its fraction
 // truncated to nanoseconds; false for a number not finite or of 2^53
 // seconds or more.
-bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out);
+MLOC_NODISCARD bool mlocDurationFromSeconds(const mlocDecimal* seconds, mlocDurationValues* out);
 
 // Sets an option the expression gives by name: none, also for a name
 // mloc:duration does not take (ignored); mloc_messageFaultBadOption for a
@@ -85,8 +86,8 @@ mlocMessageFaultKind mlocSetDurationOption(DurationValue* value, const uint8_t* 
 
 // Prepares a value as its expression makes it; false when its formatter
 // cannot be made.
-bool mlocPrepareDuration(const DurationValue* value, const mlocDataSet* data,
-                         const mlocLocale* locale, PreparedDuration* out);
+MLOC_NODISCARD bool mlocPrepareDuration(const DurationValue* value, const mlocDataSet* data,
+                                        const mlocLocale* locale, PreparedDuration* out);
 
 // Writes a value in a locale, with the formatter prepared for it when
 // prepared (which may be null) has its options, else one made here;

@@ -85,7 +85,7 @@ static void AddHigh(Builder* b, uint32_t index)
 
 // A code's range at the end or the front; false for a duplicate or a
 // code sharing a range with one before.
-static bool Place(Builder* b, uint32_t code, bool high)
+MLOC_NODISCARD static bool Place(Builder* b, uint32_t code, bool high)
 {
     uint32_t index = IndexOf(b->root, code);
     if (index == 0)
@@ -128,7 +128,7 @@ static void PlaceGroups(Builder* b, const uint32_t* codes, size_t count)
 
 // The named codes in order; those after Zzzz go to the end, the last
 // one last. False on a refusal; *toEnd when Zzzz was named.
-static bool PlaceNamed(Builder* b, const uint32_t* codes, size_t count, bool* toEnd)
+MLOC_NODISCARD static bool PlaceNamed(Builder* b, const uint32_t* codes, size_t count, bool* toEnd)
 {
     *toEnd = false;
     size_t length = count;
@@ -197,7 +197,7 @@ static uint32_t Ranges(const Builder* b, uint32_t* ranges)
 // The lead byte table and the shared bytes' ranges from the ranges, as
 // ICU's setReordering; false when the shared bytes need more ranges than
 // the reordering holds.
-static bool Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
+MLOC_NODISCARD static bool Arrays(const uint32_t* ranges, uint32_t n, CollationReorder* out)
 {
     // The caller returns before making no ranges.
     MLOC_ASSERT(n > 0);

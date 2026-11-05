@@ -15,7 +15,7 @@
 #include <string.h>
 
 // Whether a pattern holds "{0}" and "{1}" once each and no other brace.
-static bool ValidPattern(const uint8_t* text, uint32_t length)
+MLOC_NODISCARD static bool ValidPattern(const uint8_t* text, uint32_t length)
 {
     uint32_t zeros = 0;
     uint32_t ones = 0;

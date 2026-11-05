@@ -34,8 +34,8 @@ void mlocNameAppend(NameWriter* w, const uint8_t* text, size_t length, bool brac
 // beginning of a sentence always, in a list or menu or alone as the
 // locale's context transforms say; contextUsageCount for a usage with
 // no transforms.
-bool mlocNameCapitalizes(const mlocDataSet* data, const mlocLocale* locale, ContextUsage usage,
-                         mlocCapitalization capitalization);
+MLOC_NODISCARD bool mlocNameCapitalizes(const mlocDataSet* data, const mlocLocale* locale,
+                                        ContextUsage usage, mlocCapitalization capitalization);
 
 // Titlecases the first code point written: ASCII by the library ("i" as
 // Turkish and Azerbaijani titlecase it), the rest by names.mloc's

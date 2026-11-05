@@ -11,14 +11,15 @@
 #include "segment_overrides.h"
 
 // An override field: none, or a set of the kind's in the code table.
-static bool ValidOverrides(uint32_t field, mlocSegmentKind kind)
+MLOC_NODISCARD static bool ValidOverrides(uint32_t field, mlocSegmentKind kind)
 {
     return field == 0 || (field <= mlocSegmentOverrideSetCount &&
                           mlocSegmentOverrideSets[field - 1].kind == kind);
 }
 
 // Whether a's bytes read from the end order before b's.
-static bool BackwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
+MLOC_NODISCARD static bool BackwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b,
+                                           uint32_t bLength)
 {
     for (uint32_t i = 1; i <= aLength && i <= bLength; i++)
     {
@@ -31,7 +32,8 @@ static bool BackwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b
 }
 
 // Whether a's bytes order before b's.
-static bool ForwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b, uint32_t bLength)
+MLOC_NODISCARD static bool ForwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b,
+                                          uint32_t bLength)
 {
     for (uint32_t i = 0; i < aLength && i < bLength; i++)
     {
@@ -47,8 +49,9 @@ static bool ForwardsBefore(const uint8_t* a, uint32_t aLength, const uint8_t* b,
 // well-formed, not empty and at most segmentMaxSuppression bytes; the
 // backward entries in strictly ascending order read from the end, each
 // value known, and the forward entries in strictly ascending order.
-static bool ValidEntries(const uint8_t* values, const uint8_t* offsets, uint32_t backward,
-                         uint32_t forward, const uint8_t* text, uint32_t textSize)
+MLOC_NODISCARD static bool ValidEntries(const uint8_t* values, const uint8_t* offsets,
+                                        uint32_t backward, uint32_t forward, const uint8_t* text,
+                                        uint32_t textSize)
 {
     uint32_t count = backward + forward;
     if (mlocLoad32(offsets) != 0 || mlocLoad32(offsets + 4 * (size_t)count) != textSize)
