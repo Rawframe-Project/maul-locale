@@ -200,6 +200,23 @@ static void TestRefusals(void)
           "a bucket past the count, null pointers and bytes mlocBuildIndex did not write");
 }
 
+// Data without the locale's labels: the index is its underflow bucket
+// alone, which every name falls in.
+static void TestWithoutLabels(void)
+{
+    mlocDataSet builtin = {s_sources, 1};
+    mlocIndexBucket bucket = {0};
+    size_t size = 0;
+    CHECK(Build("en", nullptr) > 0 &&
+              mlocBuildIndex(&s_collator, &builtin, &s_locale, nullptr, s_index, sizeof(s_index),
+                             &size) == mloc_success &&
+              Shows(s_index, "\xE2\x80\xA6") &&
+              mlocGetIndexBucket(s_index, 0, &bucket) == mloc_success &&
+              bucket.type == mloc_indexUnderflow && In(s_index, "apple", 0) &&
+              In(s_index, "zebra", 0),
+          "data without the labels: the underflow bucket alone");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -219,5 +236,6 @@ int main(void)
     TestMeasure();
     TestOptions();
     TestRefusals();
+    TestWithoutLabels();
     return s_failures == 0 ? 0 : 1;
 }
