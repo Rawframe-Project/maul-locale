@@ -9,6 +9,9 @@
 #include "catalog_hash.h"
 #include "message_read.h"
 
+#include "maul-unicode/base.h"
+#include "maul-unicode/encoding.h"
+
 #include <string.h>
 
 // Whether count + 1 offsets rise from 0 and end within size.
@@ -46,13 +49,16 @@ mlocResult mlocValidCatalogKeys(DataSpan payload)
             return mloc_errorFormat;
         }
     }
-    // Every key is found at its own index, and is NUL-free: the lookups
-    // need no other check than the comparison.
+    // Every key is found at its own index, and is UTF-8 with no NUL: the
+    // lookups need no other check than the comparison, and a chain writes
+    // a key as its text.
     for (uint32_t i = 0; i < keys.count; i++)
     {
         uint32_t length = 0;
         const uint8_t* key = mlocCatalogKeyAt(&keys, i, &length);
-        if (memchr(key, 0, length) != nullptr || mlocCatalogIndexOf(&keys, key, length) != i)
+        if (memchr(key, 0, length) != nullptr ||
+            muniValidateUtf8((const char*)key, length).status != muni_success ||
+            mlocCatalogIndexOf(&keys, key, length) != i)
         {
             return mloc_errorFormat;
         }
