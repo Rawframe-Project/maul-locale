@@ -40,20 +40,20 @@ static uint32_t Get32At(const uint8_t* p)
     return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
 }
 
-// A keys unit as the tool writes one, with its set id left 0 (the
-// validator does not read it).
-static Unit KeysUnit(void)
+// A keys unit of these keys, laid out as the tool writes one, with its
+// set id left 0 (the validator does not read it).
+static Unit KeysUnit(const char* const* keys)
 {
     size_t lengths[keyCount];
     uint32_t textSize = 0;
     for (int i = 0; i < keyCount; i++)
     {
-        lengths[i] = strlen(s_keys[i]);
+        lengths[i] = strlen(keys[i]);
         textSize += (uint32_t)lengths[i];
     }
     KeyTable t;
     Unit u = {0};
-    if (!KeyTableBuild(s_keys, lengths, keyCount, &t))
+    if (!KeyTableBuild(keys, lengths, keyCount, &t))
     {
         return u;
     }
@@ -91,7 +91,7 @@ static Unit KeysUnit(void)
             {
                 if (t.index[j] == index)
                 {
-                    memcpy(text + at, s_keys[j], lengths[j]);
+                    memcpy(text + at, keys[j], lengths[j]);
                     at += (uint32_t)lengths[j];
                 }
             }
@@ -160,7 +160,7 @@ static bool Valid(Unit u, bool keys, uint32_t size, size_t at, uint32_t value)
 
 static void TestKeys(void)
 {
-    Unit u = KeysUnit();
+    Unit u = KeysUnit(s_keys);
     CatalogKeys k;
     if (u.bytes == nullptr || !mlocReadCatalogKeys((DataSpan){u.bytes, u.size}, &k) ||
         k.places <= k.count)
@@ -191,6 +191,32 @@ static void TestKeys(void)
     free(u.bytes);
 }
 
+// A keys unit of these keys, each at its index, checked: 1 when valid, 0
+// when refused, -1 when it could not be built.
+static int KeysValid(const char* const* keys)
+{
+    Unit u = KeysUnit(keys);
+    if (u.bytes == nullptr)
+    {
+        return -1;
+    }
+    bool valid = mlocValidCatalogKeys((DataSpan){u.bytes, u.size}) == mloc_success;
+    free(u.bytes);
+    return valid ? 1 : 0;
+}
+
+// A key that is not UTF-8 is refused, though it is found at its index.
+static void TestKeyText(void)
+{
+    static const char* const s_accented[] = {"menu.open", "menu.close", "title", "caf\xC3\xA9"};
+    static const char* const s_byte[] = {"menu.open", "menu.close", "title", "a\xFF"};
+    static const char* const s_cut[] = {"menu.open", "menu.close", "title", "caf\xC3"};
+    static const char* const s_surrogate[] = {"menu.open", "menu.close", "title", "\xED\xA0\x80"};
+    CHECK(KeysValid(s_accented) == 1, "a key of two-byte UTF-8 is valid");
+    CHECK(KeysValid(s_byte) == 0 && KeysValid(s_cut) == 0 && KeysValid(s_surrogate) == 0,
+          "a key holding a byte UTF-8 never has, a cut sequence or a surrogate");
+}
+
 static void TestMessages(void)
 {
     Unit u = MessagesUnit();
@@ -218,6 +244,7 @@ static void TestMessages(void)
 int main(void)
 {
     TestKeys();
+    TestKeyText();
     TestMessages();
     return s_failures == 0 ? 0 : 1;
 }
