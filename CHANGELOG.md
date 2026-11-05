@@ -7,11 +7,24 @@ may change the API, the ABI and every data format.
 
 ## [0.12.3](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.2...v0.12.3) (2026-11-05)
 
-
 ### Fixed
 
-* **catalog:** refuse a catalog key that is not UTF-8 ([#500](https://github.com/Rawframe-Project/maul-locale/issues/500)) ([d53d9e6](https://github.com/Rawframe-Project/maul-locale/commit/d53d9e640b2459846b96c5794ac1e4eece09602f)), closes [#499](https://github.com/Rawframe-Project/maul-locale/issues/499)
-* **message:** refuse a unit argument longer than 32 bits of length ([#503](https://github.com/Rawframe-Project/maul-locale/issues/503)) ([1fbeca6](https://github.com/Rawframe-Project/maul-locale/commit/1fbeca670bea49f7dee9026218e3ce806c458a5e)), closes [#501](https://github.com/Rawframe-Project/maul-locale/issues/501)
+- A catalog key that was not UTF-8 was accepted: `mlocOpenCatalog`
+  checked a key's offsets, that it held no NUL and that it was found at
+  its own index, but not its encoding. A chain writes a key as the text
+  when no catalog has a message for it, so such a catalog handed the
+  caller ill-formed UTF-8 from its own bytes. It is now refused with
+  `mloc_errorFormat`. The catalog tool writes only UTF-8 keys, so no
+  catalog it compiled is affected
+  ([#500](https://github.com/Rawframe-Project/maul-locale/pull/500)).
+- A unit amount given to a message as an argument kept only the low 32
+  bits of its unit's length. A unit of more than 4 GiB, such as
+  `meter-aaa...` of 2^32 + 5 bytes, was formatted as the unit those
+  bits name (`meter`), where any unit past `MLOC_MAX_UNIT_ID` is
+  otherwise refused. Such an argument is now a bad operand
+  (`mloc_messageFaultBadOperand`); a unit whose length fits 32 bits
+  formats as before
+  ([#503](https://github.com/Rawframe-Project/maul-locale/pull/503)).
 
 ## [0.12.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.1...v0.12.2) (2026-11-05)
 
