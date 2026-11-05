@@ -140,6 +140,7 @@ add_library(maul-locale ${MAUL_LIBRARY_KIND}
     src/message_list.c
     src/message_grammar.c
     src/message_number.c
+    src/message_number_write.c
     src/message_offset.c
     src/message_operand.c
     src/message_parse.c
