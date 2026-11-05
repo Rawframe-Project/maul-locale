@@ -7,10 +7,18 @@ may change the API, the ABI and every data format.
 
 ## [0.12.2](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.1...v0.12.2) (2026-11-05)
 
-
 ### Fixed
 
-* **collate:** refuse collation data whose elements carry the fourth case ([#495](https://github.com/Rawframe-Project/maul-locale/issues/495)) ([f35bc65](https://github.com/Rawframe-Project/maul-locale/commit/f35bc65583fbc96c371f5f9c52ed02cc81cb3e09)), closes [#494](https://github.com/Rawframe-Project/maul-locale/issues/494)
+- A data file whose collation data gave an element the fourth case
+  (case bits 3, which ICU never writes) was accepted when opened. The
+  sort key code assumes at most three cases, so writing a key with a
+  case level, or with `caseFirst` set, from such a file stopped at an
+  assertion in a build with assertions on, and wrote a truncated byte
+  into the key in a Release build. Such a file, whether the case bits
+  sit in a long secondary or in an expansion's element, of the root or
+  of a tailoring, is now refused at `mlocOpenData` with
+  `mloc_errorFormat`. Every data file the generator writes still opens
+  ([#495](https://github.com/Rawframe-Project/maul-locale/pull/495)).
 
 ## [0.12.1](https://github.com/Rawframe-Project/maul-locale/compare/v0.12.0...v0.12.1) (2026-11-04)
 
