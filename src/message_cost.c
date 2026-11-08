@@ -164,11 +164,6 @@ bool mlocMessageCountsFit(const uint32_t* count)
            count[messageMarkups] <= MLOC_MAX_MESSAGE_EXPRESSIONS;
 }
 
-uint64_t mlocMessageCostWords(const MessageView* view)
-{
-    return (uint64_t)view->count[messageVariables] + 2 * (uint64_t)view->count[messageExpressions];
-}
-
 mlocResult mlocWriteMessageCosts(const MessageView* v, uint8_t* words)
 {
     for (uint32_t i = 0; i < v->count[messageVariables]; i++)
