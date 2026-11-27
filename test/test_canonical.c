@@ -73,6 +73,14 @@ static void TestOtherAliases(void)
           "a replacement variant already there");
     CHECK(Gives("en-heploc-scouse", "en-alalc97-scouse", mloc_changedVariants),
           "replaced variants in order");
+    // ICU4C 79.1's Locale::canonicalize gives the same.
+    CHECK(Gives("el-polytoni-u-nu-latn", "el-polyton-u-nu-latn", mloc_changedVariants) &&
+              Gives("ja-Latn-hepburn-heploc-u-ca-japanese", "ja-Latn-alalc97-u-ca-japanese",
+                    mloc_changedVariants) &&
+              Gives("de-1901-polytoni-u-co-phonebk", "de-1901-polyton-u-co-phonebk",
+                    mloc_changedVariants) &&
+              Gives("el-polytoni-x-private", "el-polyton-x-private", mloc_changedVariants),
+          "replaced variants before an extension or a private use part, which stays as it was");
 }
 
 static void TestRegionChoice(void)
