@@ -12,18 +12,17 @@
 // takes the fields of the locale's time pattern of that length as written.
 //   g++ -O2 -std=c++17 -I$ICU/include icu4c_time_ranges.cpp -L$ICU/lib \
 //       -licui18n -licuuc -licudata -Wl,-rpath,$ICU/lib -o icu_time_ranges
-#include <unicode/datefmt.h>
-#include <unicode/dtitvfmt.h>
-#include <unicode/dtptngen.h>
-#include <unicode/smpdtfmt.h>
-#include <unicode/timezone.h>
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unicode/datefmt.h>
+#include <unicode/dtitvfmt.h>
+#include <unicode/dtptngen.h>
+#include <unicode/smpdtfmt.h>
+#include <unicode/timezone.h>
 #include <vector>
 
 using namespace icu;
@@ -117,7 +116,8 @@ int main()
         {
             skeleton = TimeSkeleton(hourCycle, precision, zone);
         }
-        LocalPointer<DateIntervalFormat> format(DateIntervalFormat::createInstance(skeleton, locale, e));
+        LocalPointer<DateIntervalFormat> format(
+            DateIntervalFormat::createInstance(skeleton, locale, e));
         if (U_FAILURE(e))
         {
             printf("%s\t%s\t%s\t%s\t%s\terror\t-\n", f[0].c_str(), f[1].c_str(), f[2].c_str(),
@@ -134,14 +134,15 @@ int main()
         while (value.nextPosition(position, e))
         {
             char span[64];
-            snprintf(span, sizeof(span), "%s%d:%d:%d", spans.empty() ? "" : ",", position.getField(),
-                     position.getStart(), position.getLimit());
+            snprintf(span, sizeof(span), "%s%d:%d:%d", spans.empty() ? "" : ",",
+                     position.getField(), position.getStart(), position.getLimit());
             spans += span;
         }
         std::string utf8;
         text.toUTF8String(utf8);
-        printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", f[0].c_str(), f[1].c_str(), f[2].c_str(), f[3].c_str(),
-               f[4].c_str(), U_FAILURE(e) ? "error" : utf8.c_str(), spans.empty() ? "-" : spans.c_str());
+        printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", f[0].c_str(), f[1].c_str(), f[2].c_str(),
+               f[3].c_str(), f[4].c_str(), U_FAILURE(e) ? "error" : utf8.c_str(),
+               spans.empty() ? "-" : spans.c_str());
     }
     return 0;
 }
