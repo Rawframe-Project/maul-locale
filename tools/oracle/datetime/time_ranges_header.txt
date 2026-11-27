@@ -1,0 +1,15 @@
+# ICU4C 79.1 DateIntervalFormat (CLDR 49.0) ranges of two instants'
+# times of day, each made from the skeleton the interval generator names
+# a maul-locale/datetime.h time option by (its clock, precision and zone
+# form) or a standard time format's, in 12 locales: locale, the options'
+# hour cycle, precision, style and zone (mlocTimeOptions' values), the
+# zone (UTC for a time without one), the start and the end (seconds from
+# 1970), ICU's text and its spans (start and end in UTF-16 units, "-" for
+# one time). Where mlocTimeFormatter_FormatRange or mlocTimeFormatter_FormatRangeInZone
+# answers otherwise on purpose, its text, its spans and the cause follow:
+# - zone: across dates, the offset zone forms (O, OOOO) kept, which ICU's
+#   skeleton split drops from the date fallback's time;
+# - items: the time's own pattern, a zone's matched among the items alone
+#   (as one time is written);
+# - glue: the calendar's own atTime glue joins the date and the time
+#   (ICU takes the Gregorian one).
