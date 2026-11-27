@@ -6,8 +6,8 @@
 // built, copied to an odd address and still read; the options (fewer
 // labels, own special labels); Swedish's letters after Z, Japanese kana
 // and Chinese pinyin shown as A to Z, an inflow bucket merged into the
-// overflow bucket; the refusals. conform_index checks every CLDR locale
-// against ICU4C's index.
+// overflow bucket; a collator with a case level; the refusals.
+// conform_index checks every CLDR locale against ICU4C's index.
 
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
@@ -217,6 +217,31 @@ static void TestWithoutLabels(void)
           "data without the labels: the underflow bucket alone");
 }
 
+// A collator with a case level (-u-kc-true): its primary compare goes on
+// to the case level, so a name equal to a label at the primary level but
+// lowercase sorts before the label's uppercase. The answers are ICU4C
+// 79.1's AlphabeticIndex for the same locales and names.
+static void TestCaseLevel(void)
+{
+    static const char s_turkish[] =
+        "\xE2\x80\xA6 A B C \xC3\x87 D E F G H I \xC4\xB0 J K L M N O \xC3\x96 P Q R S \xC5\x9E T U "
+        "\xC3\x9C V W X Y Z \xE2\x80\xA6";
+    CHECK(Build("tr", nullptr) > 0 && Shows(s_index, s_turkish) && In(s_index, "\xC4\xB1", 10) &&
+              In(s_index, "\xC4\xB1rmak", 10) && In(s_index, "a", 1),
+          "Turkish: a lone dotless i in I's bucket");
+    CHECK(Build("tr-u-kc-true", nullptr) > 0 && Shows(s_index, s_turkish) &&
+              In(s_index, "\xC4\xB1", 9) && In(s_index, "\xC4\xB1rmak", 10) && In(s_index, "I", 10),
+          "Turkish with a case level: the same labels; a lone dotless i sorts before I, into H's "
+          "bucket, while a longer name and I itself stay in I's");
+    CHECK(Build("en-u-kc-true", nullptr) > 0 &&
+              Shows(s_index, "\xE2\x80\xA6 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z "
+                             "\xE2\x80\xA6") &&
+              In(s_index, "a", 0) && In(s_index, "A", 1) && In(s_index, "apple", 1) &&
+              In(s_index, "Zebra", 26),
+          "English with a case level: a lone a sorts before A, into the underflow bucket, while "
+          "A and longer names stay in their letter's");
+}
+
 int main(void)
 {
     FILE* f = fopen(MLOC_COLLATION_FILE, "rb");
@@ -237,5 +262,6 @@ int main(void)
     TestOptions();
     TestRefusals();
     TestWithoutLabels();
+    TestCaseLevel();
     return s_failures == 0 ? 0 : 1;
 }
