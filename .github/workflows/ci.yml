@@ -512,6 +512,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: emscripten-core/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
+        with:
+          # One Emscripten for every Maul library, moved in a pull request of
+          # its own, so a new compiler warning fails that pull request and a
+          # tag builds the same wasm on any day.
+          version: 7.0.1
       - name: Configure
         run: cmake --preset web
       - name: Build
