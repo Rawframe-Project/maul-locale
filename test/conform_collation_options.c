@@ -31,7 +31,7 @@
 
 #define Script(a, b, c, d) ((uint32_t)(a) << 24 | (uint32_t)(b) << 16 | (uint32_t)(c) << 8 | (d))
 
-alignas(8) static uint8_t s_file[1 << 19];
+alignas(8) static uint8_t s_file[1 << 22];
 
 static size_t Bytes(const char* hex, size_t n, uint8_t* out)
 {
