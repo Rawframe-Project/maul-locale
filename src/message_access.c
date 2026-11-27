@@ -46,6 +46,8 @@ MLOC_NODISCARD static bool Record(const void* bound, uint32_t part, BoundHeader*
 static void Parameters(const BoundHeader* h, uint32_t kind, uint32_t index, uint32_t* firstOut,
                        uint32_t* countOut)
 {
+    // Record gives these two kinds alone.
+    MLOC_ASSERT(kind == messageExpressions || kind == messageMarkups);
     uint32_t field = kind == messageExpressions ? 5 : 3;
     *countOut = mlocMessageRange(&h->view, kind, index, field, messageParameters, firstOut);
 }
@@ -76,6 +78,7 @@ static void ReadParameter(const BoundHeader* h, uint32_t p, mlocMessageParameter
     // variable are read within the view whatever the bytes hold now
     // (mlocMessageField).
     const MessageView* v = &h->view;
+    MLOC_ASSERT(p < v->count[messageParameters]);
     uint32_t kind = mlocMessageField(v, messageParameters, p, 0);
     out->attribute = kind == parameterAttribute || kind == parameterAttributeLiteral;
     out->variable = kind == parameterOptionVariable;

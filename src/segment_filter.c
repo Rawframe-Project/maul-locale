@@ -7,6 +7,7 @@
 // earlier pieces, then the current piece.
 
 #include "bytes.h"
+#include "invariant.h"
 #include "segmenter.h"
 
 #include "maul-unicode/encoding.h"
@@ -23,6 +24,9 @@ enum
 
 static size_t Start(const Segmenter* s)
 {
+    // Made refuses a segmenter whose window passes the text before the
+    // piece, and mlocSegmentLeavePiece keeps no more than that text.
+    MLOC_ASSERT(s->windowLength <= s->pieceStart);
     return s->pieceStart - s->windowLength;
 }
 
@@ -61,6 +65,9 @@ static int DecodeAt(const Segmenter* s, size_t offset, uint32_t* codePointOut)
     }
     size_t size = 0;
     muniResult r = muniDecodeUtf8(bytes, n, codePointOut, &size);
+    // At least one byte, so the readers that step by it move on, and no
+    // more than were given.
+    MLOC_ASSERT(size >= 1 && size <= n);
     // A sequence cut by the end of the text at hand may go on.
     if (r != muni_success && size == n && n < sizeof(bytes) && s->moreFollows)
     {
@@ -216,6 +223,8 @@ static int ForwardWalk(const Segmenter* s, size_t from)
         // with them; the bytes end a code point when one is an entry or the
         // next byte of the first longer one begins a code point, since
         // entries are valid UTF-8.
+        // Every entry left took each byte read, so none is shorter.
+        MLOC_ASSERT(EntryLength(s, lo) >= read);
         bool value = EntryLength(s, lo) == read;
         bool goesOn = hi - lo > (value ? 1u : 0u);
         bool boundary = value || (s->text[EntryStart(s, lo) + read] & 0xC0) != 0x80;
@@ -255,6 +264,8 @@ static int SuppressionKeeps(const Segmenter* s, size_t offset)
     {
         return 1;
     }
+    // The text before the offset ends with the entry.
+    MLOC_ASSERT(EntryLength(s, best) <= at);
     if (mlocLoad32(s->values + 4 * (size_t)best) == segmentSuppressionMatch)
     {
         return 0;
