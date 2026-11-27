@@ -223,9 +223,9 @@ static void TestWithoutLabels(void)
 // 79.1's AlphabeticIndex for the same locales and names.
 static void TestCaseLevel(void)
 {
-    static const char s_turkish[] =
-        "\xE2\x80\xA6 A B C \xC3\x87 D E F G H I \xC4\xB0 J K L M N O \xC3\x96 P Q R S \xC5\x9E T U "
-        "\xC3\x9C V W X Y Z \xE2\x80\xA6";
+    static const char s_turkish[] = "\xE2\x80\xA6 A B C \xC3\x87 D E F G H I \xC4\xB0 J K L M N O "
+                                    "\xC3\x96 P Q R S \xC5\x9E T U "
+                                    "\xC3\x9C V W X Y Z \xE2\x80\xA6";
     CHECK(Build("tr", nullptr) > 0 && Shows(s_index, s_turkish) && In(s_index, "\xC4\xB1", 10) &&
               In(s_index, "\xC4\xB1rmak", 10) && In(s_index, "a", 1),
           "Turkish: a lone dotless i in I's bucket");
