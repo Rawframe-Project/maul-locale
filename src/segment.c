@@ -7,6 +7,7 @@
 
 #include "bytes.h"
 #include "data_view.h"
+#include "invariant.h"
 #include "kinds.h"
 #include "locale_fallback.h"
 #include "locale_keyword.h"
@@ -318,6 +319,8 @@ MLOC_NODISCARD static bool Push(Segmenter* s, size_t offset)
 
 static void Pop(Segmenter* s)
 {
+    // Drain pops only a break it has read.
+    MLOC_ASSERT(s->queueCount > 0);
     s->queueCount--;
     if (s->queueCount == 0)
     {
