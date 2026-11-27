@@ -50,6 +50,7 @@ Departures without a file of their own, each stated where its part is documented
 - **Collation:** see [collation.md](collation.md#kept-differences).
 - **Temporal arithmetic:** a zoned difference rounded or totaled across a jump of the zone's clocks by a whole day (`Pacific/Apia` skipping 30 December 2011, `America/Sitka` living 18 October 1867 twice) is refused, as temporal_rs refuses it. ECMA-262 asserts there what does not hold and gives no answer yet ([tc39/proposal-temporal#3310](https://github.com/tc39/proposal-temporal/issues/3310)).
 - **Calendars:** `islamic` reads as Umm al-Qura, as in ICU4X, where ICU4C estimates it astronomically; Chinese years from the astronomical model where ICU4C's reduced model differs from the observatories.
+- **Numeric durations and unit genders:** in the numeric width, a negative amount is written as narrow, as ICU4C's `MeasureFormat` intends (`toHMS` refuses a negative field). ICU4C still writes it numerically ("-01:30") when the field is an integer, since `Formattable::getDouble()` reads an integer's bits as a double and the check never sees a negative number. There, the numbers keep the locale's minimum grouping digits (pl "1234:30"), where ICU4C groups them ("1 234:30"). Percent and permille at the short width have their CLDR gender. ICU4C writes them with the number's percent pattern and gives no gender. The texts are the same.
 
 ## Committed oracle data
 
