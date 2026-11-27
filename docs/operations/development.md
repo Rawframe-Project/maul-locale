@@ -33,7 +33,7 @@ ctest --preset linux-clang-20-asan -R '^number$'
 ./out/linux-clang-20-asan/test_number
 ```
 
-`tools/check.sh changed` runs the rule checks and the suites a change reaches; [checks.md](checks.md) has the tiers.
+`tools/check.sh changed` runs the rule checks and the suites a change reaches; [checks.md](checks.md) has the tiers. The family's pre-push hook runs it before every push once a checkout sets `git config core.hooksPath tools/hooks`; inside the Rawframe workspace it takes a heavy-job slot, and on Windows it runs in the workspace's WSL distribution.
 
 Every suite is `test/test_<name>.c`, one executable and one CTest test. A suite that reads a data file gets its path as a compile definition (`MLOC_UNITS_FILE` and the like) in `CMakeLists.txt`; under Emscripten the files are embedded. A suite prints one line per failed check with its file and line.
 
