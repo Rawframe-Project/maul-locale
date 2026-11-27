@@ -196,6 +196,14 @@ static uint32_t LongestBackward(const Segmenter* s, size_t offset)
     return best;
 }
 
+// Whether an entry left in the walk is the bytes read. Every entry left
+// took each byte read, so none is shorter.
+MLOC_NODISCARD static bool IsBytesRead(const Segmenter* s, uint32_t i, uint32_t read)
+{
+    MLOC_ASSERT(EntryLength(s, i) >= read);
+    return EntryLength(s, i) == read;
+}
+
 // ICU4C's forward walk from an offset: 1 when the break stays, 0 when it
 // is suppressed, -1 when it needs text not yet fed. The forward entries
 // that begin with the bytes read, a range of them since they are sorted,
@@ -223,9 +231,7 @@ static int ForwardWalk(const Segmenter* s, size_t from)
         // with them; the bytes end a code point when one is an entry or the
         // next byte of the first longer one begins a code point, since
         // entries are valid UTF-8.
-        // Every entry left took each byte read, so none is shorter.
-        MLOC_ASSERT(EntryLength(s, lo) >= read);
-        bool value = EntryLength(s, lo) == read;
+        bool value = IsBytesRead(s, lo, read);
         bool goesOn = hi - lo > (value ? 1u : 0u);
         bool boundary = value || (s->text[EntryStart(s, lo) + read] & 0xC0) != 0x80;
         if (read > 0 && boundary && !goesOn)
