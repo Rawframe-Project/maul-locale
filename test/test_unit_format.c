@@ -132,7 +132,12 @@ static void TestCompounds(void)
           "a quotient from the denominator's per pattern");
     CHECK(Long("en", "per-second-meter", "2", "2 per meter-second"),
           "per takes the rest, normalized");
-    // ICU4C 79.1's answers.
+    // ICU4C 79.1's answers, here and in the next check.
+    CHECK(Long("en", "hour-kilowatt", "5", "5 kilowatt-hours") &&
+              Width("en", "meter-newton", mloc_unitWidthShort, "5", "5 N\xE2\x8B\x85m") &&
+              Long("en", "foot-pound-force", "5", "5 pound-force-feet") &&
+              Long("de", "hour-kilowatt", "5", "5\xC2\xA0Kilowattstunden"),
+          "a product in another order whose normal form CLDR names takes that unit's names");
     CHECK(Width("en", "kibibyte", mloc_unitWidthShort, "3", "3 Kibyte") &&
               Long("en", "kibibyte", "3", "3 kibibytes") &&
               Width("en", "kibibyte", mloc_unitWidthNarrow, "5", "5KiB") &&
