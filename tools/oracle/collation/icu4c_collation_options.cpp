@@ -15,7 +15,10 @@
 // The texts use only code points whose root order ICU 74 (UCA 15.1) and
 // CLDR 49 (UCA 18) share. With --keys, writes instead the first text's
 // sort key under each set, in hex, as conform_collation_options --keys
-// writes ours; byte for byte that needs ICU4C 79, built on CLDR 49:
+// writes ours; byte for byte that needs ICU4C 79, built on CLDR 49, and
+// holds for every key without Han, whose primaries ICU's default data
+// orders by radical and stroke (docs/internals/collation.md, Kept
+// differences):
 //   g++ -O2 -I$ICU/include icu4c_collation_options.cpp -L$ICU/lib \
 //       -licui18n -licuuc -Wl,-rpath,$ICU/lib -o icu79_options
 
