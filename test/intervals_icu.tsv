@@ -460,13 +460,13 @@ fr_CA	gregorian	HmVVVV	-|y-MM-dd GGGGG HH 'h' mm VVVV|0	-|y-MM-dd HH 'h' mm VVVV
 fr_CA	gregorian	hmz	-|y-MM-dd GGGGG h 'h' mm a z|0	-|y-MM-dd h 'h' mm a z|0	-|y-MM-dd h 'h' mm a z|0	-|y-MM-dd h 'h' mm a z|0	h 'h' mm a – |h 'h' mm a z|0	h 'h' mm – |h 'h' mm a z|0	h 'h' mm – |h 'h' mm a z|0	{0} – {1}	h 'h' mm a z
 fr_CA	gregorian	Hmz	-|y-MM-dd GGGGG HH 'h' mm z|0	-|y-MM-dd HH 'h' mm z|0	-|y-MM-dd HH 'h' mm z|0	-|y-MM-dd HH 'h' mm z|0	H 'h' mm – |H 'h' mm z|0	H 'h' mm – |H 'h' mm z|0	H 'h' mm – |H 'h' mm z|0	{0} – {1}	HH 'h' mm z
 fr_CA	gregorian	hO	-|y-MM-dd GGGGG h 'h' a|0	-|y-MM-dd h 'h' a|0	-|y-MM-dd h 'h' a|0	-|y-MM-dd h 'h' a|0	h 'h' a – |h 'h' a|0	h 'h' – |h 'h' a|0	-|-|0	{0} – {1}	h 'h' a O
-fr_CA	gregorian	HO	-|y-MM-dd GGGGG HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	H 'h' – |H 'h'|0	H 'h' – |H 'h'|0	-|-|0	{0} – {1}	HH O
+fr_CA	gregorian	HO	-|y-MM-dd GGGGG HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	H 'h' – |H 'h'|0	H 'h' – |H 'h'|0	-|-|0	{0} – {1}	HH 'h' O
 fr_CA	gregorian	hv	-|y-MM-dd GGGGG h 'h' a v|0	-|y-MM-dd h 'h' a v|0	-|y-MM-dd h 'h' a v|0	-|y-MM-dd h 'h' a v|0	h 'h' a – |h 'h' a v|0	h 'h' – |h 'h' a v|0	-|-|0	{0} – {1}	h 'h' a v
-fr_CA	gregorian	Hv	-|y-MM-dd GGGGG HH v|0	-|y-MM-dd HH v|0	-|y-MM-dd HH v|0	-|y-MM-dd HH v|0	H 'h' – |H 'h' v|0	H 'h' – |H 'h' v|0	-|-|0	{0} – {1}	HH v
+fr_CA	gregorian	Hv	-|y-MM-dd GGGGG HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	H 'h' – |H 'h' v|0	H 'h' – |H 'h' v|0	-|-|0	{0} – {1}	HH 'h' v
 fr_CA	gregorian	hVVVV	-|y-MM-dd GGGGG h 'h' a VVVV|0	-|y-MM-dd h 'h' a VVVV|0	-|y-MM-dd h 'h' a VVVV|0	-|y-MM-dd h 'h' a VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	h 'h' a VVVV
-fr_CA	gregorian	HVVVV	-|y-MM-dd GGGGG HH VVVV|0	-|y-MM-dd HH VVVV|0	-|y-MM-dd HH VVVV|0	-|y-MM-dd HH VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH VVVV
+fr_CA	gregorian	HVVVV	-|y-MM-dd GGGGG HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH 'h' VVVV
 fr_CA	gregorian	hz	-|y-MM-dd GGGGG h 'h' a z|0	-|y-MM-dd h 'h' a z|0	-|y-MM-dd h 'h' a z|0	-|y-MM-dd h 'h' a z|0	h 'h' a – |h 'h' a z|0	h 'h' – |h 'h' a z|0	-|-|0	{0} – {1}	h 'h' a z
-fr_CA	gregorian	Hz	-|y-MM-dd GGGGG HH z|0	-|y-MM-dd HH z|0	-|y-MM-dd HH z|0	-|y-MM-dd HH z|0	H 'h' – |H 'h' z|0	H 'h' – |H 'h' z|0	-|-|0	{0} – {1}	HH z
+fr_CA	gregorian	Hz	-|y-MM-dd GGGGG HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	H 'h' – |H 'h' z|0	H 'h' – |H 'h' z|0	-|-|0	{0} – {1}	HH 'h' z
 fr_CA	gregorian	L	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} – {1}	L
 fr_CA	gregorian	LLL	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} – {1}	LLL
 fr_CA	gregorian	LLLL	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	-|-|0	{0} – {1}	LLLL

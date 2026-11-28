@@ -112,15 +112,28 @@ LD_LIBRARY_PATH=$ICU/lib ./icu4c_segment < cases.txt > test/segment_icu.tsv
 
 `test/skeletons_icu.tsv`, `intervals_icu.tsv`, `date_ranges_icu.tsv`, `time_ranges_icu.tsv` and `datetime_ranges_icu.tsv` hold ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat` answers; each file's header says what was asked.
 
-`datetime/` writes them again from their parts: an ICU4C program answers a list of cases, and `merge.py HEADER OUTPUT DEPARTURES CASE_COLUMNS` puts the table's header first and appends, to each case the library answers otherwise on purpose, its own text and the cause. The header, the cases and the departures are kept beside the program; a departure is changed there, then the table is written again. With ICU4C 79.1, from the repository root:
+`datetime/` writes them again with ICU4C 79.1. Each table's ICU4C program answers a list of cases, one a line, with ICU's answer after the case:
+
+- `icu4c_skeletons.cpp` gives `DateTimePatternGenerator`'s best pattern, and `icu4c_interval_patterns.cpp` the patterns `DateIntervalFormat` resolves for each greatest difference, which no public call gives: it alone reads ICU's private members. Their cases are the first three columns of `skeletons_icu.tsv` and `intervals_icu.tsv` (locale, calendar, skeleton), so a new ICU release answers the same questions; the questions a new CLDR release adds are added as each header says. These tables hold ICU's answers alone: where the library differs on purpose, `tools/skeleton-exceptions.txt` and `tools/interval-exceptions.txt` say so.
+- The range tables keep their header, cases and departures beside their programs, and `merge.py HEADER OUTPUT DEPARTURES CASE_COLUMNS` puts the header first and appends, to each case the library answers otherwise on purpose, its own text and the cause; a departure is changed there, then the table is written again. `icu4c_time_ranges.cpp` answers the time ranges. For the date and date-time ranges, `ranges.py date|datetime CASES MLOCGEN CLDR_COMMON ICU_INTERVALS` makes each case's skeleton (the classical one `mlocgen semantic` gives for its options, with the time's and the zone's letters as `tools/mlocgen/interval_gen.c` names them) and has `icu4c_intervals.cpp` format the range.
+
+From the repository root, with each program built as its header says and `mlocgen` from a build of the library:
 
 ```sh
 d=tools/oracle/datetime
-g++ -O2 -std=c++17 -I$ICU/include $d/icu4c_time_ranges.cpp -L$ICU/lib -licui18n -licuuc -licudata \
-    -Wl,-rpath,$ICU/lib -o icu_time_ranges
+t=test/skeletons_icu.tsv
+{ grep '^#' $t; grep -v '^#' $t | cut -f1-3 | ./icu_skeletons; } > skeletons.tsv && mv skeletons.tsv $t
+t=test/intervals_icu.tsv
+{ grep '^#' $t; grep -v '^#' $t | cut -f1-3 | ./icu_interval_patterns; } > intervals.tsv && mv intervals.tsv $t
 ./icu_time_ranges < $d/time_ranges_cases.txt > time_ranges.out
 python3 -I $d/merge.py $d/time_ranges_header.txt time_ranges.out $d/time_ranges_departures.tsv 5 \
     > test/time_ranges_icu.tsv
+python3 -I $d/ranges.py date $d/date_ranges_cases.txt out/<preset>/mlocgen "$CLDR/common" ./icu_intervals \
+    > date_ranges.out
+python3 -I $d/merge.py $d/date_ranges_header.txt date_ranges.out $d/date_ranges_departures.tsv 4 \
+    > test/date_ranges_icu.tsv
+python3 -I $d/ranges.py datetime $d/datetime_ranges_cases.txt out/<preset>/mlocgen "$CLDR/common" \
+    ./icu_intervals > datetime_ranges.out
+python3 -I $d/merge.py $d/datetime_ranges_header.txt datetime_ranges.out \
+    $d/datetime_ranges_departures.tsv 6 > test/datetime_ranges_icu.tsv
 ```
-
-The programs that wrote the other four tables are lost: those files stay as committed golden data until their programs are written again from the headers ([#4](https://github.com/Rawframe-Project/maul-locale/issues/4)).
