@@ -110,4 +110,17 @@ LD_LIBRARY_PATH=$ICU/lib ./icu4c_segment < cases.txt > test/segment_icu.tsv
 
 ## ICU date tables
 
-`test/skeletons_icu.tsv`, `intervals_icu.tsv`, `date_ranges_icu.tsv`, `time_ranges_icu.tsv` and `datetime_ranges_icu.tsv` hold ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat` answers; each file's header says what was asked. The programs that wrote them are lost: the files stay as committed golden data, and a new ICU release cannot regenerate them until the programs are written again from those headers ([#4](https://github.com/Rawframe-Project/maul-locale/issues/4)).
+`test/skeletons_icu.tsv`, `intervals_icu.tsv`, `date_ranges_icu.tsv`, `time_ranges_icu.tsv` and `datetime_ranges_icu.tsv` hold ICU4C 79.1's `DateTimePatternGenerator` and `DateIntervalFormat` answers; each file's header says what was asked.
+
+`datetime/` writes them again from their parts: an ICU4C program answers a list of cases, and `merge.py HEADER OUTPUT DEPARTURES CASE_COLUMNS` puts the table's header first and appends, to each case the library answers otherwise on purpose, its own text and the cause. The header, the cases and the departures are kept beside the program; a departure is changed there, then the table is written again. With ICU4C 79.1, from the repository root:
+
+```sh
+d=tools/oracle/datetime
+g++ -O2 -std=c++17 -I$ICU/include $d/icu4c_time_ranges.cpp -L$ICU/lib -licui18n -licuuc -licudata \
+    -Wl,-rpath,$ICU/lib -o icu_time_ranges
+./icu_time_ranges < $d/time_ranges_cases.txt > time_ranges.out
+python3 -I $d/merge.py $d/time_ranges_header.txt time_ranges.out $d/time_ranges_departures.tsv 5 \
+    > test/time_ranges_icu.tsv
+```
+
+The programs that wrote the other four tables are lost: those files stay as committed golden data until their programs are written again from the headers ([#4](https://github.com/Rawframe-Project/maul-locale/issues/4)).
