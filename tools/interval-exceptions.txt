@@ -4,15 +4,9 @@
 # - a calendar's own date-time glue where ICU takes the Gregorian one
 #   (the time ranges' date fallbacks of ar's Islamic and fa's Persian
 #   calendars) and fr_ML's per-path glue;
-# - fr_CA's Hv item, HH 'h' v, which ICU's data lacks (the skeleton's
-#   own pattern only).
 # - fa's month items written with LLL or LLLL and MMM or MMMM ("LLLL تا
 #   MMMM y"), split where the month is met again, which ICU reads as two
 #   fields and leaves whole, writing one month twice.
-fr_CA	gregorian	HO	-|y-MM-dd GGGGG HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	-|y-MM-dd HH|0	H 'h' – |H 'h'|0	H 'h' – |H 'h'|0	-|-|0	{0} – {1}	HH 'h' O
-fr_CA	gregorian	Hv	-|y-MM-dd GGGGG HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	-|y-MM-dd HH 'h' v|0	H 'h' – |H 'h' v|0	H 'h' – |H 'h' v|0	-|-|0	{0} – {1}	HH 'h' v
-fr_CA	gregorian	HVVVV	-|y-MM-dd GGGGG HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|y-MM-dd HH 'h' VVVV|0	-|-|0	-|-|0	-|-|0	{0} – {1}	HH 'h' VVVV
-fr_CA	gregorian	Hz	-|y-MM-dd GGGGG HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	-|y-MM-dd HH 'h' z|0	H 'h' – |H 'h' z|0	H 'h' – |H 'h' z|0	-|-|0	{0} – {1}	HH 'h' z
 fr_ML	gregorian	h	-|dd/MM/y GGGGG, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	-|dd/MM/y, h a|0	h a – |h a|0	h – |h a|0	-|-|0	{0} – {1}	h a
 fr_ML	gregorian	H	-|dd/MM/y GGGGG, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	-|dd/MM/y, HH|0	HH – |HH|0	HH – |HH|0	-|-|0	{0} – {1}	HH
 fr_ML	gregorian	hm	-|dd/MM/y GGGGG, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	-|dd/MM/y, h:mm a|0	h:mm a – |h:mm a|0	h:mm – |h:mm a|0	h:mm – |h:mm a|0	{0} – {1}	h:mm a

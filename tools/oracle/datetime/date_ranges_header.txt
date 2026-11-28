@@ -1,0 +1,15 @@
+# ICU4C 79.1 DateIntervalFormat (CLDR 49.0) ranges of two dates, each
+# made from the classical skeleton of a maul-locale/datetime.h date
+# option (as mlocgen semantic gives it) or a standard format's
+# skeleton, in 30 locale-calendars: locale, the options' fields, length,
+# year style and style (mlocDateOptions' values), the start and the end
+# (ISO dates, noon UTC), ICU's text and its spans (start and end in
+# UTF-16 units, "-" for one date). Where mlocDateFormatter_FormatRange answers
+# otherwise on purpose, its text, its spans and the cause follow:
+# - numbers: the formats' numbering override (Hebrew numerals,
+#   hanidays, jpanyear's 元), as one date is written (ICU's interval
+#   patterns drop it);
+# - split: fa's month items written LLLL and MMMM are split where the
+#   month is met again (ICU writes the first month twice);
+# - kinds: a stand-alone month is the same kind of part as a format one
+#   (ICU spans them as two fields).

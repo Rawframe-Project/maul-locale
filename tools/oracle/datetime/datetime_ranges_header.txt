@@ -1,0 +1,15 @@
+# ICU4C 79.1 DateIntervalFormat (CLDR 49.0) ranges of two instants'
+# date-times (T in UTC, Z in a zone) and dates in a zone (D), each made
+# from the date option's classical skeleton (as mlocgen semantic gives
+# it) and the time's or the zone's letters, in 10 locales: kind, locale,
+# the options' date fields, length and year style and time hour cycle,
+# precision and zone (mlocDateTimeOptions' values; the zone the date's
+# for D), the zone, the start and the end (seconds from 1970), ICU's text
+# and its spans (start and end in UTF-16 units, "-" for one value). Where
+# the library answers otherwise on purpose, its text, its spans and the
+# cause follow:
+# - date: on one day the date written as the formatter writes it, where
+#   ICU writes it by its skeleton normalized (one d, M under three);
+# - prefixed: on two days a date that lacks the greatest difference's
+#   field written with it, where ICU, finding no interval skeleton for a
+#   time with seconds or a zone alone, leaves the field out;
