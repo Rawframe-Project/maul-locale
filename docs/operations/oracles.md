@@ -37,7 +37,7 @@ The cases cover the 105 modern locales of `tools/oracle/currency/locales.txt`.
 | `numeric/` | `cases.py DIR` writes numeric durations with their exact split. | `icu_numeric.cpp` (`MeasureFormat` numeric width), `ours_numeric.c` |
 | `lists/` | `cases.py` writes 28 lists per locale and style, ICU's contextual cases among them. Give locales canonicalized ("he", not "iw"). | `icu_lists.cpp`, `ours_lists.c` (internal functions, `-Isrc`) |
 
-Two classes of difference are expected: values where ICU's `double` arithmetic drifts and the library's exact value is right (unit conversion), and "generic", which ICU refuses.
+Three classes of difference are expected: values where ICU's `double` arithmetic drifts and the library's exact value is right (unit conversion); "generic", which ICU refuses; and a mixed unit's unit fields, which ICU does not mark ([conformance.md](../internals/conformance.md#listed-departures)).
 
 ## Parsing
 
